@@ -583,12 +583,40 @@ body::before {
   font-size: 1.5rem;
 }
 
-.cart-header button {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: none;
-  background: rgba(94, 107, 74, 0.08);
+.cart-header .cart-close-button {
+  display: grid;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--card-border);
+  border-radius: 50%;
+  background: var(--card-background);
+  color: var(--olive-dark);
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+}
+
+.cart-close-button svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.cart-close-button:hover {
+  transform: rotate(90deg);
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, var(--card-background));
+}
+
+.cart-close-button:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
 }
 
 .cart-items {
@@ -1446,9 +1474,9 @@ input[type="range"] {
   transform-box: fill-box;
   transform-origin: center;
 }
-.loader.opening .loader-yolk { animation: loader-yolk-reveal .55s .65s cubic-bezier(.2, .7, .2, 1) forwards; }
-.loader.opening .loader-shell-top { animation: loader-shell-top-open .65s .6s cubic-bezier(.2, .7, .2, 1) forwards; }
-.loader.opening .loader-shell-bottom { animation: loader-shell-bottom-open .65s .6s cubic-bezier(.2, .7, .2, 1) forwards; }
+.loader.opening .loader-yolk { animation: loader-yolk-reveal 1.5s .25s cubic-bezier(.2, .7, .2, 1) forwards; }
+.loader.opening .loader-shell-top { animation: loader-shell-top-open 1.65s .15s cubic-bezier(.2, .7, .2, 1) forwards; }
+.loader.opening .loader-shell-bottom { animation: loader-shell-bottom-open 1.65s .15s cubic-bezier(.2, .7, .2, 1) forwards; }
 @keyframes loader-yolk-reveal {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
@@ -1583,6 +1611,7 @@ body.cart-open { overflow: hidden; }
 /* Scrolling, nighttime and small celebratory effects */
 .marquee {
   overflow: hidden;
+  width: 100%;
   margin: 1.6rem auto 0;
   padding: .8rem 0;
   color: var(--soil);
@@ -1591,9 +1620,16 @@ body.cart-open { overflow: hidden; }
   font-weight: 800;
   letter-spacing: .12em;
 }
-.marquee-track { width: max-content; animation: marquee-scroll 28s linear infinite; }
+.marquee-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  animation: marquee-scroll 28s linear infinite;
+  will-change: transform;
+}
+.marquee-track > span { flex: 0 0 auto; }
 .marquee-track b { color: var(--gold); padding: 0 .8rem; }
-@keyframes marquee-scroll { to { transform: translateX(-50%); } }
+@keyframes marquee-scroll { to { transform: translateX(-25%); } }
 .egg-meter {
   position: fixed;
   z-index: 28;
@@ -1709,7 +1745,7 @@ body.game-open { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .egg-cursor, .marquee { display: none !important; }
+  .egg-cursor { display: none !important; }
   .reveal-item { opacity: 1; transform: none; filter: none; }
 }
 
