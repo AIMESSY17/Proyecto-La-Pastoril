@@ -487,7 +487,7 @@ function initLoader() {
     } catch (error) {
       console.warn('No se pudo guardar el estado de carga:', error);
     }
-  }, 4500);
+  }, 1500);
 }
 
 function initGallery() {

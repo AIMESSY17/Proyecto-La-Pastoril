@@ -1446,9 +1446,9 @@ input[type="range"] {
   transform-box: fill-box;
   transform-origin: center;
 }
-.loader.opening .loader-yolk { animation: loader-yolk-reveal .8s 2.3s cubic-bezier(.2, .7, .2, 1) forwards; }
-.loader.opening .loader-shell-top { animation: loader-shell-top-open 1s 2.25s cubic-bezier(.2, .7, .2, 1) forwards; }
-.loader.opening .loader-shell-bottom { animation: loader-shell-bottom-open 1s 2.25s cubic-bezier(.2, .7, .2, 1) forwards; }
+.loader.opening .loader-yolk { animation: loader-yolk-reveal .55s .65s cubic-bezier(.2, .7, .2, 1) forwards; }
+.loader.opening .loader-shell-top { animation: loader-shell-top-open .65s .6s cubic-bezier(.2, .7, .2, 1) forwards; }
+.loader.opening .loader-shell-bottom { animation: loader-shell-bottom-open .65s .6s cubic-bezier(.2, .7, .2, 1) forwards; }
 @keyframes loader-yolk-reveal {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
