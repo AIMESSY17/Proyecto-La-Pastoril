@@ -1,0 +1,10 @@
+Iconos OpenMoji en PNG (618 x 618)
+
+Los iconos de esta carpeta fueron descargados de OpenMoji:
+https://github.com/hfg-gmuend/openmoji
+
+Autoría: OpenMoji contributors.
+Licencia: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0):
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Los archivos se mantienen en PNG para utilizarlos localmente en el sitio.

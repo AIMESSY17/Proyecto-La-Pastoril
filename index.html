@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>La Pastoril – Del campo a tu mesa</title>
+    <meta
+      name="description"
+      content="Huevos de campo de gallina y codorniz de Zona Sur, Buenos Aires. La Pastoril – Del campo a tu mesa."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Arbutus+Slab&family=Karla:wght@400;500;700&family=Zilla+Slab:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <meta name="theme-color" content="#f4ebd6" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" id="openGraphUrl" content="" />
+    <meta property="og:title" content="La Pastoril – Del campo a tu mesa" />
+    <meta property="og:description" content="Huevos frescos de campo de gallina y codorniz en Zona Sur. Pedí por WhatsApp." />
+    <meta property="og:image" id="openGraphImage" content="imagenes/granja-campo.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="La Pastoril – Del campo a tu mesa" />
+    <meta name="twitter:description" content="Huevos frescos de campo de gallina y codorniz en Zona Sur." />
+    <meta name="twitter:image" id="twitterImage" content="imagenes/granja-campo.jpg" />
+    <link rel="canonical" id="canonicalUrl" href="" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="imagenes/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="imagenes/apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json" id="businessSchema">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "La Pastoril",
+        "description": "Huevos frescos de campo de gallina y codorniz en Zona Sur, Buenos Aires.",
+        "areaServed": "Zona Sur, Buenos Aires",
+        "sameAs": ["https://www.instagram.com/lapastoril_/"]
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Saltar al contenido</a>
+    <div class="loader" id="loader">
+      <div class="loader-egg-wrap">
+        <div class="egg-stage">
+          <div class="egg-shell">
+            <div class="yolk"></div>
+            <svg class="egg-crack" viewBox="0 0 120 160" aria-hidden="true"><path d="M60 10 50 34 67 48 52 66 68 83 51 101 65 118 55 148" /></svg>
+          </div>
+          <div class="egg-half egg-half-left"></div><div class="egg-half egg-half-right"></div>
+          <blockquote class="founder-quote">“Acá se levantan los huevos que después llegan a tu casa”</blockquote>
+          <a class="instagram-cta" href="https://www.instagram.com/lapastoril_/" target="_blank" rel="noopener noreferrer">Conocé más en Instagram</a>
+        </div>
+        <div class="home-orders">
+          <h3>Tu pedido en casa</h3>
+          <div class="home-orders-grid">
+            <figure><img src="imagenes/pedido-listo.jpg" alt="Pedido de huevos de campo listo para entregar" loading="lazy" decoding="async" /></figure>
+            <figure><img src="imagenes/huevos-envase.jpg" alt="Huevos frescos en su envase" loading="lazy" decoding="async" /></figure>
+            <figure><img src="imagenes/maples-preparados.jpg" alt="Maples de huevos preparados para el barrio" loading="lazy" decoding="async" /></figure>
+          </div>
+          <a class="instagram-cta" href="https://www.instagram.com/lapastoril_/" target="_blank" rel="noopener noreferrer">Mandanos tu foto por DM</a>
+        </div>
+        <div class="hero-scroll-indicator" aria-hidden="true"><span></span> Deslizá para conocer la granja</div>
+      </div>
+      <div class="loader-progress">
+        <span class="loader-progress-fill"></span>
+        <span id="loaderPercent">0%</span>
+      </div>
+      <div class="loader-phrases" id="loaderPhrases">
+        <span class="phrase active">Juntando huevos…</span>
+        <span class="phrase">Las gallinas están en reunión de directorio…</span>
+        <span class="phrase">Calentando los nidos…</span>
+        <span class="phrase">Despertando al gallo…</span>
+        <span class="phrase">Casi listo, no seas ansioso.</span>
+      </div>
+      <div class="loader-chick" aria-hidden="true"><span>pío</span><i></i></div>
+    </div>
+
+    <canvas id="fieldParticles" aria-hidden="true"></canvas>
+    <div class="mobile-nav-backdrop" id="mobileNavBackdrop" aria-hidden="true"></div>
+    <div class="cart-overlay" id="cartOverlay" aria-hidden="true"></div>
+    <header class="topbar">
+      <nav class="navbar container" aria-label="Navegación principal">
+        <a href="#comprar" class="brand" aria-label="La Pastoril home">
+          <span class="brand-mark">LP</span>
+          <span class="brand-copy">
+            <strong>LA PASTORIL</strong>
+            <small>Del campo a tu mesa</small>
+          </span>
+        </a>
+
+        <div class="nav-links" id="navLinks">
+          <a href="#comprar" class="nav-link" aria-current="page">Comprar</a>
+          <div class="nav-dropdown" id="aboutDropdown">
+            <button class="nav-link nav-dropdown-toggle" id="aboutToggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="aboutMenu">Nosotros <span aria-hidden="true">▾</span></button>
+            <div class="nav-dropdown-menu" id="aboutMenu" hidden>
+              <a class="nav-link dropdown-link" href="#bienestar">Bienestar</a>
+              <a class="nav-link dropdown-link" href="#campo">Nuestro campo</a>
+              <a class="nav-link dropdown-link" href="#historia">Historia</a>
+            </div>
+          </div>
+          <a href="#cuidados" class="nav-link">Cuidados</a>
+          <a href="#clientes" class="nav-link">Clientes</a>
+          <a href="#ubicacion" class="nav-link">Ubicación</a>
+          <a href="#faq" class="nav-link">FAQ</a>
+        </div>
+        <div class="nav-actions" id="navActions">
+          <button class="cart-toggle" id="cartToggle" type="button" aria-label="Abrir carrito" aria-haspopup="dialog" aria-expanded="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H6" /><circle cx="10" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
+            <span class="cart-count" id="cartCountMini" aria-live="polite">0</span>
+          </button>
+          <button class="whatsapp-nav-button" type="button" id="whatsAppDesktop">Pedir por WhatsApp</button>
+        </div>
+      </nav>
+    </header>
+
+    <button class="night-toggle theme-toggle" id="nightToggle" type="button" aria-label="Activar modo noche" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <circle class="theme-sun" cx="12" cy="12" r="4" />
+        <path class="theme-sun-rays" d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+        <path class="theme-moon" d="M20.5 15.1A8.5 8.5 0 0 1 8.9 3.5 8.7 8.7 0 1 0 20.5 15.1Z" />
+        <path class="theme-stars" d="m17.5 3 .45 1.2L19.2 4.7 18 5.15 17.5 6.4 17.05 5.15 15.8 4.7l1.25-.5L17.5 3Z" />
+      </svg>
+      <span class="sr-only">Cambiar tema</span>
+    </button>
+
+    <button class="fab whatsapp-fab" aria-label="Enviar pedido por WhatsApp" id="whatsAppFab">
+      <span class="action-icon"><img class="line-icon" src="imagenes/iconos/1F4AC.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span>
+    </button>
+
+    <div class="sr-only" id="cartAnnouncement" aria-live="polite" aria-atomic="true"></div>
+    <aside class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle" aria-hidden="true" inert>
+      <div class="cart-header">
+        <h3 id="cartTitle" tabindex="-1">Tu carrito</h3>
+        <button id="closeCart" aria-label="Cerrar carrito">
+          <img class="line-icon" src="imagenes/iconos/274C.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" />
+        </button>
+      </div>
+
+      <div class="cart-items" id="cartItems"></div>
+
+      <div class="promo-meter">
+        <div class="promo-copy">
+          <strong id="promoText">Sumá $X más y te regalamos 6 huevitos de codorniz</strong>
+        </div>
+        <div class="promo-progress-wrap">
+          <div class="promo-progress" id="promoProgress"></div>
+        </div>
+      </div>
+
+      <div class="cart-summary">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <strong id="subtotalValue">$0</strong>
+        </div>
+        <div class="summary-row total">
+          <span>Total</span>
+          <strong id="totalValue">$0</strong>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>Nombre</span>
+          <input type="text" id="customerName" placeholder="Tu nombre" />
+        </label>
+        <label>
+          <span>Zona / barrio</span>
+          <input type="text" id="customerZone" placeholder="Ej: Quilmes" />
+        </label>
+        <label>
+          <span>Día preferido</span>
+          <select id="deliveryDay">
+            <option value="">Elegí un día</option>
+            <option value="Lunes">Lunes</option>
+            <option value="Martes">Martes</option>
+            <option value="Miércoles">Miércoles</option>
+            <option value="Jueves">Jueves</option>
+            <option value="Viernes">Viernes</option>
+            <option value="Sábado">Sábado</option>
+          </select>
+        </label>
+        <label class="full-width">
+          <span>Aclaraciones</span>
+          <textarea id="customerNotes" rows="3" placeholder="¿Qué querés que sepamos?"></textarea>
+        </label>
+      </div>
+
+      <button class="checkout-button" id="checkoutButton">Enviar pedido por WhatsApp</button>
+    </aside>
+
+    <main class="page-shell" id="main-content" tabindex="-1">
+      <section id="comprar" class="tab-panel active">
+        <div class="hero">
+          <div class="hero-card">
+            <div class="hero-copy">
+              <span class="eyebrow">Huevos de campo, de verdad.</span>
+              <h1>Huevos de campo, de verdad.</h1>
+              <p class="lead" id="timeGreeting">Buen día. Huevos recién puestos, del campo a tu mesa.</p>
+              <div class="hero-badges">
+                <span class="hero-badge"><span class="badge-icon"><img class="line-icon" src="imagenes/iconos/1F33F.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span> Campo abierto</span>
+                <span class="hero-badge"><span class="badge-icon"><img class="line-icon" src="imagenes/iconos/1F69A.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span> Envíos a coordinar</span>
+                <span class="hero-badge"><span class="badge-icon"><img class="line-icon" src="imagenes/iconos/2764.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span> +6.600 seguidores nos eligen</span>
+              </div>
+              <div class="hero-actions">
+                <button class="primary-button" data-scroll-target="catalogSection">Armar mi pedido</button>
+              </div>
+              <p class="hero-proof">Gallinas a campo abierto · Zona Sur, Buenos Aires</p>
+            </div>
+            <div class="hero-visual">
+              <div class="hero-photo">
+                <img src="imagenes/granja-campo.jpg" alt="Gallinas en el campo" width="4153" height="6240" fetchpriority="high" decoding="async" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="order-banner">
+          <div class="banner-head">
+            <span class="section-kicker">¿Cómo hacer tu pedido?</span>
+            <h2>Es muy fácil</h2>
+          </div>
+          <div class="steps">
+            <div class="step-item">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <strong>Elegí tus huevos</strong>
+                <span>Gallina y codorniz</span>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <strong>Pedí por mensaje</strong>
+                <span>En WhatsApp</span>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <strong>Acordá el envío</strong>
+                <span>Te lo resolvemos</span>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-number">4</div>
+              <div class="step-content">
+                <strong>Disfrutá del campo</strong>
+                <span>En casa o en la mesa</span>
+              </div>
+            </div>
+          </div>
+          <div class="progress-line"><span></span></div>
+        </div>
+
+        <div class="catalog-wrap" id="catalogSection">
+          <div class="section-header">
+            <span class="section-kicker">01 — Comprar</span>
+            <h2>Elegí lo que te gusta</h2>
+          </div>
+          <div class="filter-chips" id="filterChips" aria-label="Filtrar productos"></div>
+          <div class="catalog-controls">
+            <label class="catalog-search-label" for="catalogSearch">Buscar productos</label>
+            <input type="search" id="catalogSearch" placeholder="Buscar huevos, packs…" />
+            <label class="catalog-sort-label" for="catalogSort">Ordenar</label>
+            <select id="catalogSort">
+              <option value="default">Recomendados</option>
+              <option value="asc">Menor precio</option>
+              <option value="desc">Mayor precio</option>
+            </select>
+          </div>
+          <div class="catalog-grid" id="catalogGrid"></div>
+        </div>
+        <div class="marquee" aria-label="Frescos, de campo, sin jaulas, campo abierto">
+          <div class="marquee-track"><span>FRESCOS <b>🥚</b> DE CAMPO <b>🥚</b> SIN JAULAS <b>🥚</b> CAMPO ABIERTO <b>🥚</b> FRESCOS <b>🥚</b> DE CAMPO <b>🥚</b> SIN JAULAS <b>🥚</b> CAMPO ABIERTO <b>🥚</b></span></div>
+        </div>
+      </section>
+
+      <section id="bienestar" class="tab-panel">
+        <div class="container-inner">
+          <div class="section-header center">
+            <span class="section-kicker">02 — Bienestar</span>
+            <h2>Gallinas felices = huevos distintos</h2>
+          </div>
+
+          <div class="wellbeing-top">
+            <div class="wellbeing-photo">
+              <img src="imagenes/gallinas-campo.jpg" alt="Gallinas felices" />
+            </div>
+            <div class="commitments">
+              <div class="commitment-item">
+                <span class="icon"><img class="line-icon" src="imagenes/iconos/2600.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span>
+                <div>
+                  <h3>Aire libre todo el día</h3>
+                  <p>Se mueven, descansan y comen en contacto con el sol y la tierra.</p>
+                </div>
+              </div>
+              <div class="commitment-item">
+                <span class="icon"><img class="line-icon" src="imagenes/iconos/1F33E.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span>
+                <div>
+                  <h3>Alimentación natural</h3>
+                  <p>Balance sano con ración, forraje y atención constante del campo.</p>
+                </div>
+              </div>
+              <div class="commitment-item">
+                <span class="icon"><img class="line-icon" src="imagenes/iconos/1F6AB.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span>
+                <div>
+                  <h3>Sin jaulas</h3>
+                  <p>Espacio para correr, explorar y tomar el sol con tranquilidad.</p>
+                </div>
+              </div>
+              <div class="commitment-item">
+                <span class="icon"><img class="line-icon" src="imagenes/iconos/1FA7A.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span>
+                <div>
+                  <h3>Cuidado veterinario</h3>
+                  <p>Controlamos salud, limpieza y bienestar de cada ave.</p>
+                </div>
+              </div>
+              <div class="commitment-item">
+                <span class="icon"><img class="line-icon" src="imagenes/iconos/1F414.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span>
+                <div>
+                  <h3>Nombre propio</h3>
+                  <p>¡Sí, tienen nombre! Cada una forma parte de la historia del barrio.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chicken-cards">
+            <div class="chicken-card">
+              <div class="chicken-art"><img class="line-icon" src="imagenes/iconos/1F414.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></div>
+              <h3>Doña Clotilde</h3>
+              <p>La jefa del gallinero. Siempre lidera la fila y vigila que todo esté bien.</p>
+              <div class="meter"><span style="width: 92%"></span></div>
+            </div>
+            <div class="chicken-card">
+              <div class="chicken-art"><img class="line-icon" src="imagenes/iconos/1F414.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></div>
+              <h3>Pepita</h3>
+              <p>Siempre primera en llegar a la comida. No pierde ni una de las señales del campo.</p>
+              <div class="meter"><span style="width: 84%"></span></div>
+            </div>
+            <div class="chicken-card">
+              <div class="chicken-art"><img class="line-icon" src="imagenes/iconos/1F414.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></div>
+              <h3>Mora</h3>
+              <p>Adicta a las lombrices y a dar vueltas alrededor del carrito del rastrojo.</p>
+              <div class="meter"><span style="width: 76%"></span></div>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-item">
+              <strong data-counter="120">0</strong>
+              <span>gallinas al aire libre</span>
+            </div>
+            <div class="stat-item">
+              <strong data-counter="9">0</strong>
+              <span>horas de sol por día</span>
+            </div>
+            <div class="stat-item">
+              <strong data-counter="840">0</strong>
+              <span>huevos recolectados esta semana</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="campo" class="tab-panel">
+        <div class="container-inner">
+          <div class="section-header center">
+            <span class="section-kicker">03 — Nuestro campo</span>
+            <h2>Un lugar donde la tierra habla.</h2>
+          </div>
+
+          <div class="sky-scene" aria-hidden="true">
+            <svg class="sky-defs" width="0" height="0" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+              <defs>
+                <filter id="cloud-soft" color-interpolation-filters="sRGB" x="-30%" y="-60%" width="160%" height="220%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.012 0.02" numOctaves="4" result="cloud-noise" />
+                  <feDisplacementMap in="SourceGraphic" in2="cloud-noise" scale="40" result="cloud-displaced" />
+                  <feGaussianBlur in="cloud-displaced" stdDeviation="2.5" />
+                </filter>
+                <g id="cloud-shape" fill="currentColor" filter="url(#cloud-soft)">
+                  <g class="cloud-bob">
+                    <path d="M31 89c-14 0-25-10-25-23s11-23 25-23c5-22 24-37 47-37 19 0 36 11 43 29 5-4 12-7 20-7 19 0 34 15 34 34h16c15 0 27 12 27 27s-12 27-27 27H31c-15 0-27-12-27-27s12-27 27-27z" />
+                  </g>
+                </g>
+              </defs>
+            </svg>
+            <svg class="cloud" width="240" height="120" viewBox="0 0 240 120" style="--w: 240px; --y: 18px; --o: .84; --d: -3s;" focusable="false"><use href="#cloud-shape" /></svg>
+            <svg class="cloud" width="190" height="95" viewBox="0 0 240 120" style="--w: 190px; --y: 61px; --o: .62; --d: -18s;" focusable="false"><use href="#cloud-shape" /></svg>
+            <svg class="cloud" width="285" height="143" viewBox="0 0 240 120" style="--w: 285px; --y: 6px; --o: .72; --d: -32s;" focusable="false"><use href="#cloud-shape" /></svg>
+            <svg class="cloud" width="160" height="80" viewBox="0 0 240 120" style="--w: 160px; --y: 70px; --o: .5; --d: -45s;" focusable="false"><use href="#cloud-shape" /></svg>
+          </div>
+
+          <div class="masonry-gallery" id="galleryGrid">
+            <figure class="gallery-item tall">
+              <img src="imagenes/gallinas-cuidado.jpg" alt="Gallinas en el campo" />
+            </figure>
+            <figure class="gallery-item">
+              <img src="imagenes/huevos-envase.jpg" alt="Huevos frescos" />
+            </figure>
+            <figure class="gallery-item tall">
+              <img src="imagenes/codornices.jpg" alt="Codornices" />
+            </figure>
+            <figure class="gallery-item">
+              <img src="imagenes/pedido-listo.jpg" alt="Packaging La Pastoril" />
+            </figure>
+            <figure class="gallery-item wide">
+              <img src="imagenes/maples-preparados.jpg" alt="Estantería de huevos" />
+            </figure>
+            <figure class="gallery-item">
+              <img src="imagenes/huevos-maple.jpg" alt="Huevos de campo" />
+            </figure>
+          </div>
+
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <h3>Amanecer en el gallinero</h3>
+                <p>Cuando se abre el día, las gallinas salen con calma, se estiran y empiezan a moverse con energía.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <h3>Recolección a mano</h3>
+                <p>Cada huevo se selecciona con atención, con el cuidado de quien conoce cada nido.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <h3>Selección y limpieza</h3>
+                <p>Se revisa tamaño, limpieza y frescura antes de pasar a la próxima etapa.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <h3>Packaging con etiqueta La Pastoril</h3>
+                <p>Se embalan con una etiqueta artesanal, pensada para conservar lo mejor del campo.</p>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <h3>Camino a tu mesa</h3>
+                <p>De la granja a tu cocina, con la frescura que solo un huevo de campo tiene.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="codorniz-section">
+            <div class="codorniz-copy">
+              <span class="section-kicker">Codornices</span>
+              <h3>Huevos de codorniz: chiquitos, manchados y poderosos.</h3>
+              <p>Más intensos y sabrosos, perfectos para desayunos, ensaladas, picadas y platos con personalidad.</p>
+            </div>
+            <div class="codorniz-photo">
+              <img src="imagenes/huevos-codorniz.jpg" alt="Puesto de madera con codornices" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cuidados" class="tab-panel">
+        <div class="container-inner">
+          <div class="section-header center">
+            <span class="section-kicker">04 — Cuidados</span>
+            <h2>Cómo disfrutar mejor cada huevo</h2>
+          </div>
+
+          <div class="accordion" id="accordion">
+            <div class="accordion-item open">
+              <button class="accordion-trigger" type="button">Cómo conservar huevos de campo <span>+</span></button>
+              <div class="accordion-content">
+                <p>No hace falta heladera si se consumen rápido: mejor guardarlos en un lugar fresco y seco, lejos de la humedad y del sol. Si los dejás en la heladera, usá el cajón de la puerta y mantené siempre la punta hacia abajo.</p>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <button class="accordion-trigger" type="button">Cómo saber si un huevo está fresco <span>+</span></button>
+              <div class="accordion-content">
+                <div class="floating-test">
+                  <div class="float-glass" id="eggFloatDemo" role="button" tabindex="0" aria-label="Tocá para probar cómo flota el huevo">
+                    <svg viewBox="0 0 160 190" aria-hidden="true"><path class="glass-water" d="M30 95 Q45 90 60 95 T90 95 T120 95 T140 95 V155 Q140 170 125 170 H45 Q30 170 30 155Z"/><path class="glass-outline" d="M25 35h110l-10 120q-2 15-17 15H52q-15 0-17-15Z"/></svg>
+                    <span class="egg-float-demo"><img class="line-icon" src="imagenes/iconos/1F95A.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span>
+                    <span class="float-hint">Tocá para ver la prueba</span>
+                  </div>
+                  <p>Toqueá el huevo para verlo hundirse o flotar. Cuanto más fresco, más pesado y más se hunde; si está más viejo, puede flotar con mayor facilidad.</p>
+                </div>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <button class="accordion-trigger" type="button">Cómo cocinar huevos de codorniz <span>+</span></button>
+              <div class="accordion-content">
+                <p>Se cocinan más rápido que los de gallina. Unos 2 a 3 minutos para hervidos suaves y 4 a 5 minutos para una textura más firme. Son ideales en tostadas, picaditas y ensaladas.</p>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <button class="accordion-trigger" type="button">Cuánto duran <span>+</span></button>
+              <div class="accordion-content">
+                <p>Con buena conservación, los huevos de gallina suelen mantenerse muy bien durante varios días. Si son de campo y frescos, se disfrutan mejor en la primera semana para máxima intensidad de sabor.</p>
+              </div>
+            </div>
+            <div class="accordion-item">
+              <button class="accordion-trigger" type="button">Recetas rápidas <span>+</span></button>
+              <div class="accordion-content">
+                <p>Huevos revueltos con ciboulette, tostadas con queso crema y rúcula, tortilla de papa y perejil, o una fritura corta para acompañar pan casero y sal de campo.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="tools-grid">
+            <div class="tool-card">
+              <h3>¿Cuántos huevos necesito?</h3>
+              <div class="range-wrap">
+                <label>Personas</label>
+                <input type="range" id="peopleRange" min="1" max="8" value="4" />
+                <strong id="peopleValue">4 personas</strong>
+              </div>
+              <div class="range-wrap">
+                <label>Frecuencia</label>
+                <input type="range" id="daysRange" min="1" max="7" value="4" />
+                <strong id="daysValue">4 días por semana</strong>
+              </div>
+              <p class="recommendation" id="packRecommendation">Te conviene un pack de 12 huevos por semana.</p>
+              <button class="secondary-button" id="addRecommendedPack">Agregar al carrito</button>
+            </div>
+
+            <div class="tool-card">
+              <h3>Punto de cocción</h3>
+              <div class="cook-slider-wrap" id="cookVisual" style="--cook: 0.444">
+                <svg class="cook-egg" id="cookEgg" viewBox="0 0 280 180" role="img" aria-label="Huevo mollet, cocido durante 7 minutos">
+                  <defs>
+                    <linearGradient id="shellGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#fffdf7" />
+                      <stop offset="1" stop-color="#d9c9a7" />
+                    </linearGradient>
+                    <radialGradient id="yolkGradient" cx="40%" cy="32%">
+                      <stop offset="0" stop-color="#fff2a9" stop-opacity=".92" />
+                      <stop offset=".32" stop-color="var(--yolk-color)" />
+                      <stop offset="1" stop-color="#cf7909" />
+                    </radialGradient>
+                  </defs>
+                  <ellipse class="egg-shadow" cx="140" cy="145" rx="105" ry="12" />
+                  <path class="egg-shell-shape" d="M25 105C29 51 72 24 140 24s111 27 115 81c-28 24-67 38-115 38S53 129 25 105Z" />
+                  <path class="egg-white-shape" d="M34 103c5-46 42-70 106-70s101 24 106 70c-27 20-62 32-106 32s-79-12-106-32Z" />
+                  <ellipse class="overcook-ring" cx="140" cy="91" rx="65" ry="54" />
+                  <ellipse class="egg-yolk" cx="140" cy="91" rx="55" ry="47" />
+                  <circle class="yolk-core" cx="140" cy="91" r="33" />
+                  <ellipse class="yolk-gloss" cx="122" cy="71" rx="12" ry="6" />
+                  <path class="shell-edge" d="M25 105c28 24 67 38 115 38s87-14 115-38" />
+                </svg>
+                <div class="cook-controls">
+                  <label for="cookRange">Minutos de cocción</label>
+                  <div class="cook-range-wrap">
+                    <input type="range" id="cookRange" min="3" max="12" value="7" step="1" aria-valuetext="7 minutos, mollet" />
+                    <div class="cook-marks" aria-hidden="true">
+                      <span style="--mark-position: 0%">3</span>
+                      <span style="--mark-position: 33.333%">6</span>
+                      <span style="--mark-position: 55.556%">8</span>
+                      <span style="--mark-position: 100%">12</span>
+                    </div>
+                  </div>
+                  <div class="cook-presets" role="group" aria-label="Puntos de cocción rápidos">
+                    <button type="button" data-cook-minutes="3">Pasado por agua</button>
+                    <button type="button" data-cook-minutes="5">Cremoso</button>
+                    <button type="button" data-cook-minutes="7">Mollet</button>
+                    <button type="button" data-cook-minutes="9">Duro</button>
+                  </div>
+                  <div class="cook-result" aria-live="polite">
+                    <strong id="cookValue">7 min · Mollet</strong>
+                    <span id="cookTexture">Yema húmeda al centro</span>
+                    <p id="cookTip">Firme por fuera, cremosa en el centro.</p>
+                  </div>
+                  <small class="cook-note">Huevo grande, al agua hirviendo; después, al agua fría.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="signature">Un huevo de campo se disfruta con calma.</p>
+        </div>
+      </section>
+
+      <section id="ubicacion" class="tab-panel">
+        <div class="container-inner">
+          <div class="section-header center">
+            <span class="section-kicker">05 — Ubicación</span>
+            <h2>Zona Sur, Buenos Aires</h2>
+          </div>
+
+          <div class="location-grid">
+            <div class="map-card">
+              <iframe
+                src="https://www.google.com/maps?q=Zona%20Sur%20Buenos%20Aires&z=11&output=embed"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                title="Mapa de Zona Sur, Buenos Aires"
+              ></iframe>
+            </div>
+            <div class="info-card">
+              <h3>Zona de entrega</h3>
+              <ul>
+                <li><span class="li-icon"><img class="line-icon" src="imagenes/iconos/1F4CD.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span> Cobertura por zona: zona sur y alrededores</li>
+                <li><span class="li-icon"><img class="line-icon" src="imagenes/iconos/1F4C5.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span> Horarios: Lun–Sáb 9 a 19 hs</li>
+                <li><span class="li-icon"><img class="line-icon" src="imagenes/iconos/1F4CD.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span> Retiro por el campo con cita previa</li>
+                <li><span class="li-icon"><img class="line-icon" src="imagenes/iconos/1F69A.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /></span> Envíos: día a coordinar</li>
+              </ul>
+
+              <div class="zones-selector">
+                <label for="zoneSelect">¿Llegamos a tu barrio?</label>
+                <select id="zoneSelect">
+                  <option value="Lomas de Zamora">Lomas de Zamora</option>
+                  <option value="Banfield">Banfield</option>
+                  <option value="Lanús">Lanús</option>
+                  <option value="Temperley">Temperley</option>
+                  <option value="Adrogué">Adrogué</option>
+                  <option value="Quilmes">Quilmes</option>
+                  <option value="Bernal">Bernal</option>
+                  <option value="Berazategui">Berazategui</option>
+                  <option value="Florencio Varela">Florencio Varela</option>
+                  <option value="Avellaneda">Avellaneda</option>
+                  <option value="Almirante Brown">Almirante Brown</option>
+                  <option value="Esteban Echeverría">Esteban Echeverría</option>
+                  <option value="Ezeiza">Ezeiza</option>
+                  <option value="Monte Grande">Monte Grande</option>
+                  <option value="Burzaco">Burzaco</option>
+                  <option value="Longchamps">Longchamps</option>
+                  <option value="Glew">Glew</option>
+                  <option value="Claypole">Claypole</option>
+                  <option value="La Plata">La Plata</option>
+                  <option value="Otro">Otro</option>
+                </select>
+                <div class="zone-result" id="zoneResult" aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="historia" class="tab-panel">
+        <div class="container-inner">
+          <div class="section-header center">
+            <span class="section-kicker">06 — Historia</span>
+            <h2>De la granja al barrio</h2>
+          </div>
+
+          <div class="story-grid">
+            <figure class="founder-photo"><img src="imagenes/granja-campo.jpg" alt="Fundador de La Pastoril junto a los huevos de campo" loading="lazy" decoding="async" /></figure>
+            <div class="story-card big">
+              <p>La Pastoril nació con la idea de llevar al barrio lo que a veces parece imposible: huevos frescos, con sabor, sin apuro y con la tranquilidad de saber de dónde vienen. Empezamos con unos pocos nidos, mucho cuidado y una promesa: cocinar con respeto por la tierra, por la gallina y por la mesa.</p>
+            </div>
+            <div class="story-card accent">
+              <p>Hoy seguimos cuidando cada detalle: alimentación, movimiento, luz, recolección y distribución. Todo, para que cada huevo se sienta como un regalo del campo.</p>
+            </div>
+          </div>
+          <div class="story-timeline" aria-label="Historia de La Pastoril">
+            <article class="story-milestone"><strong>Las primeras 20 gallinas</strong><span>Un comienzo de campo.</span></article>
+            <article class="story-milestone"><strong>Primer pedido por Instagram</strong><span>El barrio empezó a conocernos.</span></article>
+            <article class="story-milestone"><strong>Llegan las codornices</strong><span>Más variedad para la mesa.</span></article>
+            <article class="story-milestone"><strong>Nace la etiqueta</strong><span>Una identidad propia.</span></article>
+            <article class="story-milestone"><strong>+6.600 seguidores</strong><span>Una comunidad que crece.</span></article>
+          </div>
+          <blockquote class="founder-quote">“Acá se levantan los huevos que después llegan a tu casa”</blockquote>
+          <a class="instagram-cta" href="https://www.instagram.com/lapastoril_/" target="_blank" rel="noopener noreferrer">Conocé más en Instagram</a>
+        </div>
+      </section>
+
+      <section id="clientes" class="tab-panel">
+        <div class="container-inner">
+          <div class="section-header center">
+            <span class="section-kicker">07 — Clientes</span>
+            <h2>Qué dicen la gente que nos conoce</h2>
+          </div>
+
+          <div class="reviews-stats"><strong><span data-counter="1200">0</span>+</strong><span>pedidos compartidos</span><strong><span data-rating="4.9">0</span> / 5</strong><span>puntaje de la comunidad</span></div>
+          <p class="review-disclaimer">Contadores y reseñas ilustrativos: actualizar con métricas verificadas antes de publicar.</p>
+          <div class="reviews-grid" id="reviewsCarousel">
+            <article class="review-card">
+              <span class="stars" aria-label="5 estrellas">
+                <img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" />
+              </span>
+              <p>“La diferencia se nota al primer bocado: más sabor, más color y mucho más frescura. Los huevos de codorniz son un lujo.”</p>
+              <strong>— Mica, Bernal</strong>
+            </article>
+            <article class="review-card">
+              <span class="stars" aria-label="5 estrellas">
+                <img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" />
+              </span>
+              <p>“Pedimos para la familia y nos encantó la atención. Todo muy claro, muy amable y con buena onda.”</p>
+              <strong>— Lorenzo, Quilmes</strong>
+            </article>
+            <article class="review-card">
+              <span class="stars" aria-label="5 estrellas">
+                <img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" /><img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" />
+              </span>
+              <p>“Los huevos de gallina tienen un sabor de campo en serio. Nos volvimos clientes fijos.”</p>
+              <strong>— Celeste, Banfield</strong>
+            </article>
+            <article class="review-card whatsapp-review"><span class="review-tag">Mensaje de WhatsApp</span><p>“Llegaron impecables y súper frescos. Ya estamos pensando el próximo pedido.”</p><strong>Opinión ilustrativa</strong></article>
+            <article class="review-card instagram-review"><span class="review-tag">Comentario de Instagram <b>♥</b></span><p>“Qué lindo recibir un pedacito del campo en casa 🌿”</p><strong>Opinión ilustrativa</strong></article>
+            <article class="review-card whatsapp-review"><span class="review-tag">Mensaje de WhatsApp</span><p>“La atención fue muy amable y coordinar la entrega resultó facilísimo.”</p><strong>Opinión ilustrativa</strong></article>
+            <article class="review-card instagram-review"><span class="review-tag">Comentario de Instagram <b>♥</b></span><p>“Los huevitos de codorniz son perfectos para compartir.”</p><strong>Opinión ilustrativa</strong></article>
+            <article class="review-card whatsapp-review"><span class="review-tag">Mensaje de WhatsApp</span><p>“Todo llegó bien cuidado. Se nota el cariño en cada detalle.”</p><strong>Opinión ilustrativa</strong></article>
+          </div>
+          <p class="review-disclaimer">Las reseñas ilustrativas se reemplazarán por opiniones reales de clientes.</p>
+          <div class="home-orders">
+            <h3>Tu pedido en casa</h3>
+            <div class="home-orders-grid">
+              <figure><img src="imagenes/pedido-listo.jpg" alt="Pedido de huevos de campo listo para entregar" loading="lazy" decoding="async" /></figure>
+              <figure><img src="imagenes/huevos-envase.jpg" alt="Huevos frescos en su envase" loading="lazy" decoding="async" /></figure>
+              <figure><img src="imagenes/maples-preparados.jpg" alt="Maples preparados para el barrio" loading="lazy" decoding="async" /></figure>
+            </div>
+            <a class="instagram-cta" href="https://www.instagram.com/lapastoril_/" target="_blank" rel="noopener noreferrer">Mandanos tu foto por DM</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" class="tab-panel">
+        <div class="container-inner">
+          <div class="section-header center">
+            <span class="section-kicker">08 — Preguntas frecuentes</span>
+            <h2>Preguntas frecuentes</h2>
+          </div>
+
+          <div class="faq-list">
+            <div class="accordion-item faq-item open"><button class="accordion-trigger" type="button" aria-expanded="true">¿Puedo pedir sin mirar todo el catálogo? <span>−</span></button><div class="accordion-content"><p>Claro. Elegís lo que quieras y después armás el pedido en WhatsApp, listo y fácil.</p></div></div>
+            <div class="accordion-item faq-item"><button class="accordion-trigger" type="button" aria-expanded="false">¿Los entregan en toda la zona sur? <span>+</span></button><div class="accordion-content"><p>Hacemos entregas en la zona sur de Buenos Aires y también podés retirar por el campo con cita previa.</p></div></div>
+            <div class="accordion-item faq-item"><button class="accordion-trigger" type="button" aria-expanded="false">¿Qué pasa con el pedido por mayor? <span>+</span></button><div class="accordion-content"><p>Si querés más cantidad, podés consultar directamente por WhatsApp y te armamos una propuesta.</p></div></div>
+            <div class="accordion-item faq-item"><button class="accordion-trigger" type="button" aria-expanded="false">¿Los huevos son de campo realmente? <span>+</span></button><div class="accordion-content"><p>Sí. Se crían al aire libre, con control de salud y cuidados naturales del emprendimiento.</p></div></div>
+            <div class="accordion-item faq-item"><button class="accordion-trigger" type="button" aria-expanded="false">¿Qué medios de pago aceptan? <span>+</span></button><div class="accordion-content"><p>Coordinamos el medio de pago al confirmar tu pedido por WhatsApp.</p></div></div>
+            <div class="accordion-item faq-item"><button class="accordion-trigger" type="button" aria-expanded="false">¿Hay un mínimo de compra? <span>+</span></button><div class="accordion-content"><p>Podés consultar el mínimo y las condiciones de entrega para tu barrio directamente por WhatsApp.</p></div></div>
+            <div class="accordion-item faq-item"><button class="accordion-trigger" type="button" aria-expanded="false">¿Cuál es la diferencia entre huevos de campo y de granja? <span>+</span></button><div class="accordion-content"><p>Nuestras gallinas tienen espacio al aire libre, se mueven y reciben atención diaria; eso forma parte del cuidado del campo.</p></div></div>
+            <div class="accordion-item faq-item"><button class="accordion-trigger" type="button" aria-expanded="false">¿Cada cuánto hay stock? <span>+</span></button><div class="accordion-content"><p>El stock depende de la recolección. Escribinos por WhatsApp y te confirmamos lo disponible ese día.</p></div></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <svg class="footer-wave" viewBox="0 0 1440 48" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 48V24C120 4 240 4 360 20s240 24 360 12 240-28 360-24 240 20 360 28V48Z" />
+      </svg>
+
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="#comprar" class="footer-logo" aria-label="La Pastoril, ir al inicio">
+            <span class="footer-mark">LP</span>
+            <span class="footer-name">La Pastoril</span>
+          </a>
+          <p>Huevos de campo de gallina y codorniz, del campo a tu mesa en Zona Sur.</p>
+          <a class="footer-cta" href="https://wa.me/5491176254150" target="_blank" rel="noopener noreferrer">Pedir por WhatsApp</a>
+        </div>
+
+        <nav class="footer-col" aria-label="Tienda">
+          <h3>Tienda</h3>
+          <ul>
+            <li><a href="#comprar">Comprar</a></li>
+            <li><a href="#cuidados">Cuidados y recetas</a></li>
+            <li><a href="#faq">Preguntas frecuentes</a></li>
+          </ul>
+        </nav>
+
+        <nav class="footer-col" aria-label="Conocenos">
+          <h3>Conocenos</h3>
+          <ul>
+            <li><a href="#bienestar">Bienestar animal</a></li>
+            <li><a href="#campo">Nuestro campo</a></li>
+            <li><a href="#historia">Nuestra historia</a></li>
+            <li><a href="#clientes">Clientes</a></li>
+          </ul>
+        </nav>
+
+        <div class="footer-col">
+          <h3>Contacto</h3>
+          <ul>
+            <li><a href="https://wa.me/5491176254150" target="_blank" rel="noopener noreferrer">+54 9 11 7625-4150</a></li>
+            <li>Lun a Sáb · 9 a 19 hs</li>
+            <li><a href="#ubicacion">Entregas en Zona Sur</a></li>
+          </ul>
+          <a class="footer-social" href="https://www.instagram.com/lapastoril_/" target="_blank" rel="noopener noreferrer" aria-label="Instagram de La Pastoril">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" />
+              <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+            </svg>
+            <span>@lapastoril_</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© <span id="footerYear">2026</span> La Pastoril · Zona Sur, Buenos Aires</p>
+        <div class="footer-bottom-actions">
+          <button type="button" class="footer-egg" id="eggTrigger" aria-label="Huevo escondido">🥚</button>
+          <a href="#comprar" class="footer-top" id="backToTop">Volver arriba ↑</a>
+        </div>
+      </div>
+    </footer>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Galería de imágenes" aria-hidden="true" inert>
+      <button class="lightbox-close" id="lightboxClose" aria-label="Cerrar vista previa">
+        <img class="line-icon" src="imagenes/iconos/274C.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" />
+      </button>
+      <button class="lightbox-nav prev" id="lightboxPrev" aria-label="Anterior">‹</button>
+      <img id="lightboxImage" alt="Previsualización" />
+      <button class="lightbox-nav next" id="lightboxNext" aria-label="Siguiente">›</button>
+    </div>
+
+    <div class="egg-meter" id="eggMeter" aria-label="Progreso de lectura"><span></span></div>
+    <div class="product-modal" id="productModal" aria-hidden="true" inert></div>
+    <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Navegación móvil">
+      <a href="#comprar"><span>Comprar</span></a>
+      <a href="#campo"><span>Campo</span></a>
+      <a href="#cuidados"><span>Cuidados</span></a>
+      <a href="#ubicacion"><span>Ubicación</span></a>
+      <button id="mobileMore" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="moreSheet"><span>Más</span></button>
+    </nav>
+    <section class="more-sheet" id="moreSheet" role="dialog" aria-modal="true" aria-labelledby="moreSheetTitle" aria-hidden="true" inert>
+      <div class="more-sheet-handle" aria-hidden="true"></div>
+      <h2 id="moreSheetTitle" tabindex="-1">Explorá La Pastoril</h2>
+      <button class="more-sheet-close" id="moreSheetClose" type="button" aria-label="Cerrar menú">×</button>
+      <nav aria-label="Más secciones">
+        <a href="#bienestar">Bienestar</a>
+        <a href="#historia">Historia</a>
+        <a href="#clientes">Clientes</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+    </section>
+    <div class="egg-cursor" id="eggCursor" aria-hidden="true"></div>
+    <div class="tab-wave" id="tabWave" aria-hidden="true"></div>
+    <div class="feather-confetti" id="featherConfetti" aria-hidden="true"></div>
+    <div class="egg-rain" id="eggRain" aria-hidden="true"></div>
+    <div class="game-modal" id="gameModal" role="dialog" aria-modal="true" aria-labelledby="gameTitle" hidden>
+      <div class="game-panel">
+        <button class="game-close" id="gameClose" type="button" aria-label="Cerrar juego">×</button>
+        <h2 id="gameTitle">Atrapá los huevos</h2>
+        <p>Mové la canasta con el mouse, el dedo o las flechas ← →. Tenés 30 segundos.</p>
+        <canvas id="eggGame" width="640" height="360" aria-label="Minijuego: atrapá los huevos con la canasta"></canvas>
+        <div class="game-status"><span id="gameScore">Puntos: 0</span><span id="gameTime">30 s</span></div>
+        <button class="primary-button" id="gameStart" type="button">Empezar</button>
+        <p class="game-result" id="gameResult" aria-live="polite"></p>
+      </div>
+    </div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
