@@ -36,8 +36,6 @@ const promoProgress = document.getElementById('promoProgress');
 const subtotalValue = document.getElementById('subtotalValue');
 const totalValue = document.getElementById('totalValue');
 const loader = document.getElementById('loader');
-const loaderPercent = document.getElementById('loaderPercent');
-const loaderPhrases = [...document.querySelectorAll('.phrase')];
 const timeGreeting = document.getElementById('timeGreeting');
 const cartToggle = document.getElementById('cartToggle');
 const lightbox = document.getElementById('lightbox');
@@ -481,58 +479,15 @@ function initLoader() {
     return;
   }
 
-  let progress = 0;
-  let phraseIndex = 0;
-  const interval = setInterval(() => {
-    progress += 6;
-    if (progress >= 100) {
-      progress = 100;
-      clearInterval(interval);
-      const finish = () => {
-        loader.classList.add('hidden');
-        document.body.classList.add('revealed');
-        try {
-          sessionStorage.setItem('lapastoril-loader-seen', 'true');
-        } catch (error) {
-          console.warn('No se pudo guardar el estado de carga:', error);
-        }
-      };
-      if (prefersReducedMotion()) {
-        finish();
-      } else {
-        loader.classList.add('broken');
-        setTimeout(() => {
-          loader.querySelector('.loader-chick').classList.add('visible');
-        }, 280);
-        setTimeout(finish, 1450);
-      }
+  loader.classList.add('opening');
+  window.setTimeout(() => {
+    loader.classList.add('hidden');
+    try {
+      sessionStorage.setItem('lapastoril-loader-seen', 'true');
+    } catch (error) {
+      console.warn('No se pudo guardar el estado de carga:', error);
     }
-
-    const yolk = document.querySelector('.yolk');
-    if (yolk) {
-      yolk.style.height = `${(progress / 100) * 78}%`;
-    }
-
-    loaderPercent.textContent = `${Math.round(progress)}%`;
-    const progressBar = document.querySelector('.loader-progress-fill');
-    if (progressBar) progressBar.style.width = `${progress}%`;
-
-    if (progress >= 19 && progress <= 45) {
-      phraseIndex = 0;
-    } else if (progress > 45 && progress <= 70) {
-      phraseIndex = 1;
-    } else if (progress > 70 && progress <= 85) {
-      phraseIndex = 2;
-    } else if (progress > 85 && progress <= 98) {
-      phraseIndex = 3;
-    } else if (progress >= 100) {
-      phraseIndex = 4;
-    }
-
-    loaderPhrases.forEach((phrase, index) => {
-      phrase.classList.toggle('active', index === phraseIndex);
-    });
-  }, 48);
+  }, 4500);
 }
 
 function initGallery() {

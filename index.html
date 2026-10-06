@@ -43,40 +43,25 @@
   </head>
   <body>
     <a class="skip-link" href="#main-content">Saltar al contenido</a>
-    <div class="loader" id="loader">
-      <div class="loader-egg-wrap">
-        <div class="egg-stage">
-          <div class="egg-shell">
-            <div class="yolk"></div>
-            <svg class="egg-crack" viewBox="0 0 120 160" aria-hidden="true"><path d="M60 10 50 34 67 48 52 66 68 83 51 101 65 118 55 148" /></svg>
-          </div>
-          <div class="egg-half egg-half-left"></div><div class="egg-half egg-half-right"></div>
-          <blockquote class="founder-quote">“Acá se levantan los huevos que después llegan a tu casa”</blockquote>
-          <a class="instagram-cta" href="https://www.instagram.com/lapastoril_/" target="_blank" rel="noopener noreferrer">Conocé más en Instagram</a>
-        </div>
-        <div class="home-orders">
-          <h3>Tu pedido en casa</h3>
-          <div class="home-orders-grid">
-            <figure><img src="imagenes/pedido-listo.jpg" alt="Pedido de huevos de campo listo para entregar" loading="lazy" decoding="async" /></figure>
-            <figure><img src="imagenes/huevos-envase.jpg" alt="Huevos frescos en su envase" loading="lazy" decoding="async" /></figure>
-            <figure><img src="imagenes/maples-preparados.jpg" alt="Maples de huevos preparados para el barrio" loading="lazy" decoding="async" /></figure>
-          </div>
-          <a class="instagram-cta" href="https://www.instagram.com/lapastoril_/" target="_blank" rel="noopener noreferrer">Mandanos tu foto por DM</a>
-        </div>
-        <div class="hero-scroll-indicator" aria-hidden="true"><span></span> Deslizá para conocer la granja</div>
+    <div class="loader" id="loader" aria-hidden="true">
+      <div class="loader-egg" aria-hidden="true">
+        <svg viewBox="0 0 200 240" role="presentation">
+          <defs>
+            <radialGradient id="loaderYolkGradient" cx="35%" cy="30%">
+              <stop offset="0" stop-color="#fff2a6" />
+              <stop offset="1" stop-color="#e0a526" />
+            </radialGradient>
+            <linearGradient id="loaderShellGradient" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#fffef8" />
+              <stop offset="1" stop-color="#e9dfc6" />
+            </linearGradient>
+          </defs>
+          <ellipse class="loader-egg-shadow" cx="100" cy="222" rx="57" ry="9" />
+          <ellipse class="loader-yolk" cx="100" cy="150" rx="34" ry="36" />
+          <path class="loader-shell-top" d="M100 16C53 16 25 53 26 101c0 12 3 23 8 34l18-12 16 16 16-14 17 16 17-17 18 16 16-17 16 13c5-12 8-25 7-40-3-45-29-80-75-80Z" />
+          <path class="loader-shell-bottom" d="m34 135 18-12 16 16 16-14 17 16 17-17 18 16 16-17 16 13c-11 49-35 84-68 84s-57-35-66-85Z" />
+        </svg>
       </div>
-      <div class="loader-progress">
-        <span class="loader-progress-fill"></span>
-        <span id="loaderPercent">0%</span>
-      </div>
-      <div class="loader-phrases" id="loaderPhrases">
-        <span class="phrase active">Juntando huevos…</span>
-        <span class="phrase">Las gallinas están en reunión de directorio…</span>
-        <span class="phrase">Calentando los nidos…</span>
-        <span class="phrase">Despertando al gallo…</span>
-        <span class="phrase">Casi listo, no seas ansioso.</span>
-      </div>
-      <div class="loader-chick" aria-hidden="true"><span>pío</span><i></i></div>
     </div>
 
     <canvas id="fieldParticles" aria-hidden="true"></canvas>
