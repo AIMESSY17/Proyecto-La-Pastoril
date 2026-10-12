@@ -117,6 +117,7 @@
     </button>
 
     <div class="sr-only" id="cartAnnouncement" aria-live="polite" aria-atomic="true"></div>
+    <div class="store-notice" id="storeNotice" role="status" aria-live="polite" hidden></div>
     <aside class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle" aria-hidden="true" inert>
       <div class="cart-header">
         <h3 id="cartTitle" tabindex="-1">Tu carrito</h3>
@@ -152,11 +153,18 @@
       <div class="form-grid">
         <label>
           <span>Nombre</span>
-          <input type="text" id="customerName" placeholder="Tu nombre" />
+          <input type="text" id="customerName" placeholder="Tu nombre" autocomplete="given-name" maxlength="80" required />
         </label>
         <label>
-          <span>Zona / barrio</span>
-          <input type="text" id="customerZone" placeholder="Ej: Quilmes" />
+          <span>Zona / localidad</span>
+          <select id="customerZone" required>
+            <option value="">Elegí tu zona</option>
+          </select>
+        </label>
+        <p class="zone-other-hint full-width" id="zoneOtherHint" hidden>Consultanos, capaz llegamos.</p>
+        <label>
+          <span>Teléfono <small>(opcional)</small></span>
+          <input type="tel" id="customerPhone" placeholder="Ej: 11 2345-6789" autocomplete="tel" inputmode="tel" maxlength="30" />
         </label>
         <label>
           <span>Día preferido</span>
@@ -172,11 +180,21 @@
         </label>
         <label class="full-width">
           <span>Aclaraciones</span>
-          <textarea id="customerNotes" rows="3" placeholder="¿Qué querés que sepamos?"></textarea>
+          <textarea id="customerNotes" rows="3" maxlength="500" placeholder="¿Qué querés que sepamos?"></textarea>
+        </label>
+        <!-- Campo trampa para robots: las personas no lo ven ni lo completan. -->
+        <div class="checkout-hp" aria-hidden="true">
+          <label for="customerWebsite">No completar este campo</label>
+          <input type="text" id="customerWebsite" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+        <label class="consent-check full-width">
+          <input type="checkbox" id="customerConsent" required />
+          <span>Acepto que La Pastoril guarde mis datos para gestionar el pedido, según la <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a>.</span>
         </label>
       </div>
 
-      <button class="checkout-button" id="checkoutButton">Enviar pedido por WhatsApp</button>
+      <p class="checkout-error" id="checkoutError" role="alert" hidden></p>
+      <button class="checkout-button" id="checkoutButton" type="button">Enviar pedido por WhatsApp</button>
     </aside>
 
     <main class="page-shell" id="main-content" tabindex="-1">
@@ -755,6 +773,7 @@
             <li><a href="#comprar">Comprar</a></li>
             <li><a href="#cuidados">Cuidados y recetas</a></li>
             <li><a href="#faq">Preguntas frecuentes</a></li>
+            <li><a href="privacidad.html">Política de privacidad</a></li>
           </ul>
         </nav>
 
@@ -838,6 +857,9 @@
         <p class="game-result" id="gameResult" aria-live="polite"></p>
       </div>
     </div>
+    <!-- Supabase (pedidos, productos y reseñas). Si no carga, la tienda usa los datos locales. -->
+    <script src="config.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script type="module" src="main.js"></script>
   </body>
 </html>

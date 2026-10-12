@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#f4ebd6" />
+    <title>Tu pedido · La Pastoril</title>
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Arbutus+Slab&family=Karla:wght@400;500;700&display=swap" rel="stylesheet" />
+    <style>
+      /* Página chica y liviana: mismos colores y tipografías que la tienda. */
+      :root { --bg: #f4ebd6; --paper: #fffdf7; --ink: #2c3722; --muted: #566049; --olive-dark: #3e4a30; --gold: #e0a526; --soil: #7a4b2a; --border: rgba(62, 74, 48, 0.24); }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 1.2rem; font-family: "Karla", system-ui, sans-serif; line-height: 1.5; color: var(--ink); background: var(--bg); }
+      h1, h2 { font-family: "Arbutus Slab", Georgia, serif; font-weight: 400; line-height: 1.2; margin: 0; }
+      h1 { font-size: 1.6rem; }
+      p { margin: 0; }
+      [hidden] { display: none !important; }
+      .card { width: min(480px, 100%); display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem; border-radius: 24px; background: var(--paper); border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(62, 74, 48, 0.12); }
+      .brand { display: flex; align-items: center; gap: 0.7rem; font-family: "Arbutus Slab", Georgia, serif; font-size: 1.1rem; }
+      .brand-mark { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--gold); color: #2b2000; }
+      .muted { color: var(--muted); }
+      .view { display: flex; flex-direction: column; gap: 1rem; }
+      .items { list-style: none; margin: 0; padding: 0.7rem 0; display: grid; gap: 0.3rem; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); }
+      .items li, .total { display: flex; justify-content: space-between; gap: 1rem; }
+      .total { font-size: 1.15rem; }
+      fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+      legend, .label { padding: 0; font-weight: 700; margin-bottom: 0.3rem; display: block; }
+      .stars { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 0.15rem; }
+      .stars input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+      .stars label { font-size: 2.4rem; line-height: 1; color: #8a846c; cursor: pointer; padding: 0 0.1rem; }
+      /* Las estrellas están en orden inverso para poder pintar "esta y las anteriores" solo con CSS. */
+      .stars input:checked ~ label, .stars label:hover, .stars label:hover ~ label { color: #a86f00; }
+      .stars input:focus-visible + label { outline: 3px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
+      input[type="text"], textarea { width: 100%; padding: 0.75rem 0.85rem; border-radius: 12px; border: 1.5px solid var(--border); background: #fff; color: var(--ink); font: inherit; }
+      textarea { min-height: 96px; resize: vertical; }
+      .check { display: flex; gap: 0.6rem; align-items: flex-start; }
+      .check input { flex: none; width: 1.3rem; height: 1.3rem; margin-top: 0.15rem; accent-color: var(--olive-dark); }
+      .btn { display: inline-flex; justify-content: center; align-items: center; min-height: 52px; padding: 0.7rem 1.2rem; border: 0; border-radius: 14px; background: var(--gold); color: #2b2000; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+      .btn:disabled { opacity: 0.6; cursor: progress; }
+      .btn-secondary { background: var(--olive-dark); color: #fffdf7; }
+      .error { padding: 0.7rem 0.9rem; border-radius: 12px; background: #fbe3dc; color: #7a2412; font-weight: 700; }
+      .big { font-size: 3rem; line-height: 1; }
+      :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+      a { color: inherit; }
+      .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    </style>
+    <script src="../config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="pedido.js"></script>
+  </head>
+  <body>
+    <main class="card">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">LP</span> La Pastoril</div>
+
+      <!-- Cargando -->
+      <section class="view" id="viewLoading" aria-live="polite">
+        <p class="muted">Buscando tu pedido…</p>
+      </section>
+
+      <!-- Enlace inválido, pedido cancelado o ya confirmado -->
+      <section class="view" id="viewMessage" hidden>
+        <p class="big" id="messageIcon" aria-hidden="true">🥚</p>
+        <h1 id="messageTitle"></h1>
+        <p id="messageText"></p>
+        <a class="btn btn-secondary" href="../">Ir a la tienda</a>
+      </section>
+
+      <!-- Resumen + confirmación -->
+      <section class="view" id="viewOrder" hidden>
+        <div>
+          <h1 id="orderGreeting"></h1>
+          <p class="muted" id="orderNumber"></p>
+        </div>
+        <ul class="items" id="orderItems"></ul>
+        <p class="total"><span>Total</span><strong id="orderTotal"></strong></p>
+
+        <form class="view" id="confirmForm" novalidate>
+          <fieldset>
+            <legend>¿Cómo estuvo? <span class="muted">(opcional)</span></legend>
+            <div class="stars">
+              <input type="radio" name="stars" id="star5" value="5" /><label for="star5" title="5 estrellas"><span aria-hidden="true">★</span><span class="sr">5 estrellas</span></label>
+              <input type="radio" name="stars" id="star4" value="4" /><label for="star4" title="4 estrellas"><span aria-hidden="true">★</span><span class="sr">4 estrellas</span></label>
+              <input type="radio" name="stars" id="star3" value="3" /><label for="star3" title="3 estrellas"><span aria-hidden="true">★</span><span class="sr">3 estrellas</span></label>
+              <input type="radio" name="stars" id="star2" value="2" /><label for="star2" title="2 estrellas"><span aria-hidden="true">★</span><span class="sr">2 estrellas</span></label>
+              <input type="radio" name="stars" id="star1" value="1" /><label for="star1" title="1 estrella"><span aria-hidden="true">★</span><span class="sr">1 estrella</span></label>
+            </div>
+          </fieldset>
+          <label>
+            <span class="label">Comentario <span class="muted">(opcional)</span></span>
+            <textarea id="comment" maxlength="500" placeholder="Contanos qué te parecieron los huevos"></textarea>
+          </label>
+          <label>
+            <span class="label">Tu barrio <span class="muted">(opcional)</span></span>
+            <input type="text" id="neighborhood" maxlength="60" placeholder="Ej: Temperley" />
+          </label>
+          <label class="check">
+            <input type="checkbox" id="authorize" />
+            <span>Autorizo que se muestre mi comentario en la web con mi nombre de pila y mi barrio.</span>
+          </label>
+          <p class="error" id="formError" role="alert" hidden></p>
+          <button class="btn" type="submit" id="confirmButton">Ya recibí mi pedido</button>
+          <p class="muted" style="font-size: 0.88rem;">Tus datos se usan como explica la <a href="../privacidad.html">política de privacidad</a>.</p>
+        </form>
+      </section>
+
+      <!-- Gracias -->
+      <section class="view" id="viewThanks" hidden>
+        <p class="big" aria-hidden="true">🐔</p>
+        <h1>¡Gracias!</h1>
+        <p id="thanksText">Registramos que recibiste tu pedido.</p>
+        <a class="btn" href="../">Volver a la tienda</a>
+      </section>
+    </main>
+  </body>
+</html>

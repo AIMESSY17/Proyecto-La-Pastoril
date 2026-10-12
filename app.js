@@ -1,18 +1,29 @@
-import { CART_THRESHOLD, filterDefinitions, imageDimensions, products, STORAGE_KEYS, WHATSAPP_NUMBER } from './data/products.js';
+import { CART_THRESHOLD, fallbackZones, filterDefinitions, imageDimensions, products as localProducts, STORAGE_KEYS } from './data/products.js';
 import { initCooking } from './cooking.js';
-import { persistCart, restoreCart } from './cart.js';
+import { persistCart, readStoredCart, reconcileCart } from './cart.js';
 import { getFilteredProducts } from './catalog.js';
-import { buildOrderMessage, createWhatsAppUrl, openWhatsApp } from './whatsapp.js';
+import { buildOrderMessage, createWhatsAppUrl, getWhatsAppNumber, goToWhatsApp, openWhatsApp, setWhatsAppNumber } from './whatsapp.js';
 import { focusableWithin, initNavigation, initTabs, setActiveHash } from './nav.js';
 import { restoreThemePreference } from './theme.js';
+import * as backend from './store-backend.js';
+
+const STOCK_LABELS = { disponible: 'Disponible', pocos: 'Quedan pocos', agotado: 'Agotado' };
+const DEFAULT_PRODUCT_IMAGE = 'imagenes/huevos-campo.jpg';
+const ZONE_GROUP_ORDER = ['Cerca de la granja', 'Zona Sur', 'La Plata y alrededores', 'Otras'];
+
+// Catálogo vigente: arranca vacío y se completa desde Supabase (o el respaldo local).
+let products = [];
+let catalogSource = 'none';
 
 const state = {
   currentFilter: 'all',
-  cart: restoreCart(products, STORAGE_KEYS.cart),
+  cart: readStoredCart(STORAGE_KEYS.cart),
   activeHash: window.location.hash || '#comprar',
   justAddedProductId: null,
 };
-persistCart(state.cart, STORAGE_KEYS.cart);
+let cartOpenedAt = null;
+let checkoutInFlight = false;
+const trafficSource = detectTrafficSource();
 
 const currency = new Intl.NumberFormat('es-AR', {
   style: 'currency',
@@ -31,6 +42,12 @@ const customerName = document.getElementById('customerName');
 const customerZone = document.getElementById('customerZone');
 const deliveryDay = document.getElementById('deliveryDay');
 const customerNotes = document.getElementById('customerNotes');
+const customerPhone = document.getElementById('customerPhone');
+const customerConsent = document.getElementById('customerConsent');
+const customerWebsite = document.getElementById('customerWebsite');
+const zoneOtherHint = document.getElementById('zoneOtherHint');
+const checkoutError = document.getElementById('checkoutError');
+const storeNotice = document.getElementById('storeNotice');
 const promoText = document.getElementById('promoText');
 const promoProgress = document.getElementById('promoProgress');
 const subtotalValue = document.getElementById('subtotalValue');
@@ -86,16 +103,131 @@ function formatMoney(value) {
   return currency.format(value);
 }
 
+// Escapa texto que viene de la base de datos antes de insertarlo como HTML.
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[character]);
+}
+
 function responsivePicture(imagePath, alt, className = '') {
-  const dimensions = imageDimensions[imagePath];
-  const webpPath = imagePath.replace(/\.jpg$/i, '');
-  const dimensionAttributes = dimensions ? ` width="${dimensions.width}" height="${dimensions.height}"` : '';
+  const path = imagePath || DEFAULT_PRODUCT_IMAGE;
+  const dimensions = imageDimensions[path];
   const classAttribute = className ? ` class="${className}"` : '';
+  // Fotos subidas desde el panel (Supabase Storage): ya vienen optimizadas, sin variantes WebP.
+  if (!dimensions || !/\.jpg$/i.test(path)) {
+    return `
+    <picture class="responsive-picture">
+      <img src="${escapeHtml(path)}" alt="${escapeHtml(alt)}"${classAttribute} loading="lazy" decoding="async" />
+    </picture>`;
+  }
+  const webpPath = path.replace(/\.jpg$/i, '');
   return `
     <picture class="responsive-picture">
       <source type="image/webp" srcset="${webpPath}-800.webp 800w, ${webpPath}-1600.webp 1600w" sizes="(max-width: 640px) 100vw, (max-width: 1023px) 50vw, 33vw" />
-      <img src="${imagePath}" alt="${alt}"${classAttribute} loading="lazy" decoding="async"${dimensionAttributes} />
+      <img src="${path}" alt="${escapeHtml(alt)}"${classAttribute} loading="lazy" decoding="async" width="${dimensions.width}" height="${dimensions.height}" />
     </picture>`;
+}
+
+function isSoldOut(product) {
+  return product.stockStatus === 'agotado';
+}
+
+// Convierte una fila de Supabase al formato que usa la tienda.
+function productFromRow(row) {
+  const status = STOCK_LABELS[row.stock_status] ? row.stock_status : 'disponible';
+  const whatsappOnly = Boolean(row.whatsapp_only);
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    description: row.description || '',
+    price: whatsappOnly ? 0 : Number(row.price) || 0,
+    image: row.image_url || DEFAULT_PRODUCT_IMAGE,
+    badge: row.badge || '',
+    stockStatus: status,
+    stock: whatsappOnly ? (row.category === 'mayor' ? 'Por mayor' : 'Consultá') : STOCK_LABELS[status],
+    whatsappOnly,
+    sortOrder: Number(row.sort_order) || 0,
+    qty: 1,
+  };
+}
+
+function useLocalCatalog() {
+  products = localProducts.map((product) => ({ ...product, qty: 1 }));
+  catalogSource = 'local';
+}
+
+// Carga el catálogo: primero la copia guardada (instantánea), después Supabase.
+async function loadCatalog() {
+  const cached = backend.readCachedCatalog();
+  if (cached?.length) {
+    products = cached.map(productFromRow);
+    catalogSource = 'cache';
+    renderCatalog();
+    syncCartWithCatalog(false);
+  } else if (backend.isConfigured()) {
+    catalogGrid.innerHTML = '<p class="catalog-loading" role="status">Cargando productos…</p>';
+  }
+
+  try {
+    const rows = await backend.fetchProducts();
+    products = rows.map(productFromRow);
+    catalogSource = 'remote';
+  } catch (error) {
+    if (backend.isConfigured()) console.warn('No se pudo cargar el catálogo; se usa el respaldo:', error);
+    if (catalogSource !== 'cache') useLocalCatalog();
+  }
+  renderCatalog();
+  updateProductStructuredData();
+  syncCartWithCatalog(catalogSource === 'remote');
+}
+
+function syncCartWithCatalog(authoritative) {
+  const { cart, removed } = reconcileCart(state.cart, products, authoritative);
+  state.cart = cart;
+  persistCart(state.cart, STORAGE_KEYS.cart);
+  bonusWasUnlocked = cartSubtotal() >= CART_THRESHOLD;
+  renderCart();
+  if (removed.length === 1) {
+    showStoreNotice(`Este producto ya no está disponible: ${removed[0]}. Lo sacamos de tu carrito.`);
+  } else if (removed.length > 1) {
+    showStoreNotice(`Estos productos ya no están disponibles: ${removed.join(', ')}. Los sacamos de tu carrito.`);
+  }
+}
+
+function cartSubtotal() {
+  return state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
+
+let storeNoticeTimer = 0;
+function showStoreNotice(message) {
+  if (!storeNotice) return;
+  storeNotice.textContent = message;
+  storeNotice.hidden = false;
+  window.clearTimeout(storeNoticeTimer);
+  storeNoticeTimer = window.setTimeout(() => { storeNotice.hidden = true; }, 7000);
+}
+
+// Origen de la visita: utm_source/utm_medium o el sitio que la trajo (se guarda el primero de la sesión).
+function detectTrafficSource() {
+  try {
+    const saved = sessionStorage.getItem('lapastoril-source');
+    if (saved) return saved;
+  } catch (error) { /* sin sessionStorage: se calcula igual */ }
+  const params = new URLSearchParams(window.location.search);
+  let source = [params.get('utm_source'), params.get('utm_medium')].filter(Boolean).join(' / ');
+  if (!source && document.referrer) {
+    try {
+      const referrer = new URL(document.referrer);
+      if (referrer.host !== window.location.host) source = referrer.hostname;
+    } catch (error) { /* referrer inválido */ }
+  }
+  source = (source || 'directo').slice(0, 120);
+  try {
+    sessionStorage.setItem('lapastoril-source', source);
+  } catch (error) { /* no importa */ }
+  return source;
 }
 
 function trackEvent(name, props = {}) {
@@ -114,7 +246,7 @@ function updateProductStructuredData() {
 
   const schemaElement = document.getElementById('businessSchema');
   const schema = JSON.parse(schemaElement.textContent);
-  schema.telephone = `+${WHATSAPP_NUMBER}`;
+  schema.telephone = `+${getWhatsAppNumber()}`;
   schema.hasOfferCatalog = {
     '@type': 'OfferCatalog',
     name: 'Huevos de campo',
@@ -195,7 +327,7 @@ function updateTimeAwareCopy(period = timePeriod()) {
       : 'Armá el pedido y coordinamos por WhatsApp.';
   }
 
-  const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartSubtotal();
   const threshold = CART_THRESHOLD;
   if (subtotal >= threshold) {
     promoText.textContent = period === 'night'
@@ -229,33 +361,45 @@ function renderFilters() {
 function renderCatalog() {
   const filteredProducts = getFilteredProducts(products, state.currentFilter, catalogSearch.value, catalogSort.value);
 
+  if (!filteredProducts.length) {
+    catalogGrid.innerHTML = catalogSource === 'none'
+      ? '<p class="catalog-loading" role="status">Cargando productos…</p>'
+      : '<p class="catalog-loading">No encontramos productos con ese filtro.</p>';
+    return;
+  }
+
   catalogGrid.innerHTML = filteredProducts
-    .map(
-      (product) => `
-        <article class="product-card ${product.id === 'pack-familiar' ? 'product-card-featured' : ''}" data-id="${product.id}" tabindex="0" aria-label="Ver detalles de ${product.name}">
+    .map((product) => {
+      const soldOut = isSoldOut(product);
+      const buttonLabel = soldOut
+        ? 'Agotado'
+        : state.justAddedProductId === product.id ? 'Agregado' : product.whatsappOnly ? 'Consultar' : 'Agregar';
+      const stockLabel = soldOut ? 'Agotado' : product.stock;
+      return `
+        <article class="product-card ${product.id === 'pack-familiar' ? 'product-card-featured' : ''} ${soldOut ? 'is-soldout' : ''}" data-id="${escapeHtml(product.id)}" tabindex="0" aria-label="Ver detalles de ${escapeHtml(product.name)}${soldOut ? ' (agotado)' : ''}">
           <div class="product-image">
             ${responsivePicture(product.image, product.name)}
-            <span class="sticker">${product.badge}</span>
-            ${product.stock ? `<span class="stock-badge">${product.stock}</span>` : ''}
+            ${product.badge ? `<span class="sticker">${escapeHtml(product.badge)}</span>` : ''}
+            ${stockLabel ? `<span class="stock-badge">${escapeHtml(stockLabel)}</span>` : ''}
           </div>
           <div class="product-body">
             <div class="product-head">
-              <h3>${product.name}</h3>
+              <h3>${escapeHtml(product.name)}</h3>
               <span class="price">${product.price ? formatMoney(product.price) : 'Consultá precio'}</span>
             </div>
-            <p class="product-description">${product.description}</p>
+            <p class="product-description">${escapeHtml(product.description)}</p>
             <div class="quantity-row">
-              <div class="qty-box" data-product-id="${product.id}">
-                <button class="minus-button" type="button" aria-label="Restar unidad">−</button>
+              <div class="qty-box" data-product-id="${escapeHtml(product.id)}">
+                <button class="minus-button" type="button" aria-label="Restar unidad"${soldOut ? ' disabled' : ''}>−</button>
                 <span class="product-qty">${product.qty}</span>
-                <button class="plus-button" type="button" aria-label="Sumar unidad">+</button>
+                <button class="plus-button" type="button" aria-label="Sumar unidad"${soldOut ? ' disabled' : ''}>+</button>
               </div>
-              <button class="add-button" type="button" data-add-product="${product.id}">${state.justAddedProductId === product.id ? 'Agregado' : product.whatsappOnly ? 'Consultar' : 'Agregar'}</button>
+              <button class="add-button" type="button" data-add-product="${escapeHtml(product.id)}"${soldOut ? ' disabled' : ''}>${buttonLabel}</button>
             </div>
           </div>
         </article>
-      `,
-    )
+      `;
+    })
     .join('');
 
   addProductCardEffects();
@@ -305,21 +449,26 @@ function updateQty(qtyBox, delta) {
   const product = products.find((item) => item.id === productId);
   if (!product) return;
 
-  product.qty = Math.max(1, product.qty + delta);
+  product.qty = Math.min(50, Math.max(1, product.qty + delta));
   qtyBox.querySelector('.product-qty').textContent = product.qty;
 }
 
 function addProductToCart(productId) {
   const product = products.find((item) => item.id === productId);
   if (!product) return;
+  if (isSoldOut(product)) {
+    document.getElementById('cartAnnouncement').textContent = `${product.name} está agotado.`;
+    return;
+  }
 
   if (product.whatsappOnly) {
-    const opening = timePeriod() === 'night'
-      ? 'Buenas noches, La Pastoril. Quiero consultar por el pedido por mayor para mañana.'
-      : timePeriod() === 'sunset'
-        ? 'Buenas tardes, La Pastoril. Quiero consultar por el pedido por mayor para mañana.'
-        : 'Hola, La Pastoril. Quiero consultar por el pedido por mayor.';
-    trackEvent('click_whatsapp', { intent: 'wholesale' });
+    const greeting = { night: 'Buenas noches', sunset: 'Buenas tardes', day: 'Hola' }[timePeriod()];
+    const opening = product.category === 'mayor'
+      ? timePeriod() === 'day'
+        ? 'Hola, La Pastoril. Quiero consultar por el pedido por mayor.'
+        : `${greeting}, La Pastoril. Quiero consultar por el pedido por mayor para mañana.`
+      : `${greeting}, La Pastoril. Quiero consultar por: ${product.name}.`;
+    trackEvent('click_whatsapp', { intent: product.category === 'mayor' ? 'wholesale' : 'inquiry' });
     openWhatsApp(opening);
     return;
   }
@@ -328,7 +477,7 @@ function addProductToCart(productId) {
   animateEggToCart(productId);
   const existing = state.cart.find((item) => item.id === product.id);
   if (existing) {
-    existing.quantity += product.qty;
+    existing.quantity = Math.min(50, existing.quantity + product.qty);
   } else {
     state.cart.push({
       id: product.id,
@@ -367,7 +516,7 @@ function renderCart() {
       card.innerHTML = `
         ${responsivePicture(item.image, item.name)}
         <div>
-          <h4>${item.name}</h4>
+          <h4>${escapeHtml(item.name)}</h4>
           <small>${item.quantity} unidad/es</small>
           <div class="cart-item-actions">
             <div class="qty-box">
@@ -410,7 +559,7 @@ function updateCartItem(productId, delta) {
   const item = state.cart.find((entry) => entry.id === productId);
   if (!item) return;
 
-  item.quantity += delta;
+  item.quantity = Math.min(50, item.quantity + delta);
   if (item.quantity <= 0) {
     state.cart = state.cart.filter((entry) => entry.id !== productId);
   }
@@ -424,6 +573,8 @@ function openCart() {
     lastCartTrigger = document.activeElement;
     trackEvent('open_cart');
   }
+  // Se mide desde la primera apertura del carrito (antispam: un humano tarda más de 3 s).
+  if (cartOpenedAt === null) cartOpenedAt = Date.now();
   cartDrawer.classList.add('open');
   cartOverlay.classList.add('visible');
   cartOverlay.setAttribute('aria-hidden', 'false');
@@ -446,25 +597,189 @@ function closeCart() {
   if (lastCartTrigger instanceof HTMLElement) lastCartTrigger.focus();
 }
 
-function buildWhatsAppMessage() {
-  const subtotal = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+function buildWhatsAppMessage(orderId) {
   return buildOrderMessage({
     items: state.cart,
-    subtotal,
+    subtotal: cartSubtotal(), // sin costo de envío: el total es la suma de productos
     name: customerName.value.trim() || 'Sin nombre',
     zone: customerZone.value.trim() || 'Sin zona',
     day: deliveryDay.value || 'A confirmar',
     notes: customerNotes.value.trim(),
     period: timePeriod(),
     formatMoney,
+    orderId,
   });
 }
 
-function handleCheckout() {
-  const message = buildWhatsAppMessage();
+// ---------- Zonas del carrito (select agrupado) ----------
+function renderZoneOptions(zones) {
+  const selected = customerZone.value;
+  const groups = new Map();
+  zones.forEach((zone) => {
+    const group = zone.group_name || 'Otras';
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(zone.name);
+  });
+  const orderedGroups = [...groups.keys()].sort((first, second) => {
+    const a = ZONE_GROUP_ORDER.indexOf(first);
+    const b = ZONE_GROUP_ORDER.indexOf(second);
+    return (a === -1 ? 50 : a) - (b === -1 ? 50 : b);
+  });
+  customerZone.innerHTML = '<option value="">Elegí tu zona</option>' + orderedGroups
+    .map((group) => `<optgroup label="${escapeHtml(group)}">${groups.get(group)
+      .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}</optgroup>`)
+    .join('');
+  if (selected && zones.some((zone) => zone.name === selected)) customerZone.value = selected;
+  updateZoneHint();
+}
+
+function updateZoneHint() {
+  zoneOtherHint.hidden = customerZone.value !== 'Otra';
+}
+
+async function loadZones() {
+  renderZoneOptions(backend.readCachedZones() || fallbackZones);
+  try {
+    renderZoneOptions(await backend.fetchZones());
+  } catch (error) {
+    if (backend.isConfigured()) console.warn('No se pudieron cargar las zonas:', error);
+  }
+}
+
+// ---------- Validación del carrito ----------
+function setFieldError(field, invalid) {
+  if (invalid) field.setAttribute('aria-invalid', 'true');
+  else field.removeAttribute('aria-invalid');
+}
+
+function validateCheckout() {
+  const errors = [];
+  const phoneDigits = customerPhone.value.replace(/\D/g, '');
+  const checks = [
+    [null, !state.cart.length, 'Tu carrito está vacío.'],
+    [customerName, !customerName.value.trim(), 'Escribí tu nombre.'],
+    [customerZone, !customerZone.value, 'Elegí tu zona.'],
+    [customerPhone, customerPhone.value.trim() !== '' && (phoneDigits.length < 8 || phoneDigits.length > 15), 'Revisá el teléfono: con código de área, entre 8 y 15 números.'],
+    [customerConsent, !customerConsent.checked, 'Para enviar el pedido tenés que aceptar la política de privacidad.'],
+  ];
+  let firstInvalid = null;
+  checks.forEach(([field, invalid, message]) => {
+    if (field) setFieldError(field, invalid);
+    if (!invalid) return;
+    errors.push(message);
+    if (!firstInvalid && field) firstInvalid = field;
+  });
+  checkoutError.textContent = errors.join(' ');
+  checkoutError.hidden = !errors.length;
+  if (firstInvalid) firstInvalid.focus();
+  return errors.length === 0;
+}
+
+function setCheckoutBusy(busy) {
+  checkoutButton.disabled = busy;
+  checkoutButton.setAttribute('aria-busy', String(busy));
+  if (busy) checkoutButton.textContent = 'Registrando tu pedido…';
+  else updateTimeAwareCopy();
+}
+
+// Registra el pedido en Supabase (máximo 2,5 s) y abre WhatsApp con el número de pedido.
+async function handleCheckout() {
+  if (checkoutInFlight || !validateCheckout()) return;
+  checkoutInFlight = true;
+  setCheckoutBusy(true);
+
+  const clientRef = `LP-T-${Date.now()}`;
+  const payload = {
+    p_name: customerName.value.trim().slice(0, 80),
+    p_phone: customerPhone.value.trim().slice(0, 30) || null,
+    p_zone: customerZone.value,
+    p_day: deliveryDay.value || null,
+    p_notes: customerNotes.value.trim().slice(0, 500) || null,
+    p_items: state.cart.map((item) => ({ id: item.id, quantity: item.quantity })),
+    p_source: trafficSource,
+    p_consent: customerConsent.checked,
+    p_hp: customerWebsite.value,
+    p_elapsed_ms: cartOpenedAt === null ? 0 : Math.min(Date.now() - cartOpenedAt, 2147483647),
+    p_client_ref: clientRef,
+  };
+
+  // Primero queda guardado en el navegador; si el registro funciona, se borra.
+  backend.savePendingOrder({ ref: clientRef, payload, savedAt: Date.now() });
+  let orderId = clientRef;
+  try {
+    const result = await backend.createOrder(payload, 2500);
+    orderId = result.id;
+    backend.removePendingOrder(clientRef);
+  } catch (error) {
+    if (error.permanent) backend.removePendingOrder(clientRef);
+    console.warn('El pedido se envía con número temporal:', error.message);
+  }
+
+  const message = buildWhatsAppMessage(orderId);
   trackEvent('click_whatsapp', { intent: 'checkout' });
-  openWhatsApp(message);
-  celebrate();
+
+  // El pedido ya salió: vaciamos el carrito para no mandarlo dos veces.
+  state.cart = [];
+  persistCart(state.cart, STORAGE_KEYS.cart);
+  customerNotes.value = '';
+  goToWhatsApp(message);
+
+  // Si la persona vuelve a la tienda (botón Atrás), el carrito queda listo de nuevo.
+  window.setTimeout(() => {
+    checkoutInFlight = false;
+    setCheckoutBusy(false);
+    renderCart();
+  }, 1500);
+}
+
+// ---------- Reseñas aprobadas en "Clientes" ----------
+function starsMarkup(count) {
+  const star = '<img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" />';
+  return `<span class="stars" aria-label="${count} ${count === 1 ? 'estrella' : 'estrellas'}">${star.repeat(count)}</span>`;
+}
+
+async function loadApprovedReviews() {
+  try {
+    const reviews = await backend.fetchApprovedReviews();
+    if (!reviews?.length) return; // sin reseñas reales: quedan las de respaldo
+    reviewsCarousel.innerHTML = reviews.map((review) => {
+      const stars = Math.min(5, Math.max(1, Number(review.stars) || 5));
+      const author = [review.display_name, review.neighborhood].filter(Boolean).map(escapeHtml).join(', ');
+      return `
+            <article class="review-card">
+              ${starsMarkup(stars)}
+              ${review.comment ? `<p>“${escapeHtml(review.comment)}”</p>` : ''}
+              <strong>— ${author || 'Cliente de La Pastoril'}</strong>
+            </article>`;
+    }).join('');
+    document.querySelectorAll('#clientes .review-disclaimer').forEach((note, index) => {
+      if (index > 0) note.hidden = true; // ya no son ilustrativas
+    });
+    initRevealEffects();
+  } catch (error) {
+    console.warn('No se pudieron cargar las reseñas:', error);
+  }
+}
+
+async function loadWhatsAppNumber() {
+  try {
+    const number = await backend.fetchWhatsAppNumber();
+    if (number) {
+      setWhatsAppNumber(number);
+      updateProductStructuredData();
+    }
+  } catch (error) {
+    console.warn('No se pudo leer el número de WhatsApp:', error);
+  }
+}
+
+function initCheckoutForm() {
+  customerZone.addEventListener('change', () => {
+    updateZoneHint();
+    setFieldError(customerZone, false);
+  });
+  [customerName, customerPhone].forEach((field) => field.addEventListener('input', () => setFieldError(field, false)));
+  customerConsent.addEventListener('change', () => setFieldError(customerConsent, false));
 }
 
 function initLoader() {
@@ -732,6 +1047,7 @@ function addProductCardEffects() {
 function openProductModal(product, imageIndex = 0) {
   const gallery = [...new Set([product.image, ...products.filter((entry) => entry.category === product.category && entry.image !== product.image).map((entry) => entry.image)])].slice(0, 3);
   const currentImage = gallery[imageIndex] || product.image;
+  const soldOut = isSoldOut(product);
   productModal.innerHTML = `
     <article class="product-detail" role="dialog" aria-modal="true" aria-labelledby="productDetailTitle">
       <button class="product-detail-close" type="button" aria-label="Cerrar detalle">×</button>
@@ -740,12 +1056,12 @@ function openProductModal(product, imageIndex = 0) {
         <div class="product-thumbnails">${gallery.map((image, index) => `<button type="button" class="${image === currentImage ? 'active' : ''}" data-image-index="${index}" aria-label="Ver imagen ${index + 1}">${responsivePicture(image, '', '')}</button>`).join('')}</div>
       </div>
       <div class="product-detail-copy">
-        <span class="section-kicker">${product.badge}</span>
-        <h2 id="productDetailTitle">${product.name}</h2>
+        ${product.badge ? `<span class="section-kicker">${escapeHtml(product.badge)}</span>` : ''}
+        <h2 id="productDetailTitle">${escapeHtml(product.name)}</h2>
         <strong class="price">${product.price ? formatMoney(product.price) : 'Consultá precio'}</strong>
-        <p>${product.description} Cada lote se recolecta con cuidado para que disfrutes un producto fresco, de origen conocido y con auténtico sabor de campo.</p>
-        <h3>Qué incluye</h3><p>${product.name}. Entrega a coordinar por WhatsApp.</p>
-        <button class="primary-button product-detail-add" type="button">${product.whatsappOnly ? 'Consultar por WhatsApp' : 'Agregar al carrito'}</button>
+        <p>${escapeHtml(product.description)} Cada lote se recolecta con cuidado para que disfrutes un producto fresco, de origen conocido y con auténtico sabor de campo.</p>
+        <h3>Qué incluye</h3><p>${escapeHtml(product.name)}. Entrega a coordinar por WhatsApp.</p>
+        <button class="primary-button product-detail-add" type="button"${soldOut ? ' disabled' : ''}>${soldOut ? 'Agotado por ahora' : product.whatsappOnly ? 'Consultar por WhatsApp' : 'Agregar al carrito'}</button>
       </div>
     </article>`;
   lastProductTrigger = document.activeElement;
@@ -1259,11 +1575,17 @@ function init() {
   initNavigation(nightToggle);
   initNightMode();
   updateProductStructuredData();
-  bonusWasUnlocked = state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0) >= CART_THRESHOLD;
+  bonusWasUnlocked = cartSubtotal() >= CART_THRESHOLD;
   renderFilters();
   initCatalogInteractions();
-  renderCatalog();
   renderCart();
+  initCheckoutForm();
+  loadCatalog();
+  loadZones();
+  loadApprovedReviews();
+  loadWhatsAppNumber();
+  // Pedidos que no se pudieron registrar en visitas anteriores.
+  window.setTimeout(() => backend.retryPendingOrders().catch(() => {}), 3000);
   initTabs(initRevealEffects);
   initLoader();
   initGallery();

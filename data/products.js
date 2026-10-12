@@ -23,6 +23,8 @@ export const imageDimensions = Object.freeze({
   'imagenes/maples-granja.jpg': { width: 3072, height: 4096 },
 });
 
+// Catálogo de RESPALDO: se usa solo si Supabase no responde.
+// Los productos reales se administran desde el panel (/admin → Productos).
 export const products = [
   {
     id: 'maple-30',
@@ -36,6 +38,8 @@ export const products = [
     badge: 'Recién puestos',
     stock: 'Quedan pocos',
     qty: 1,
+    stockStatus: 'pocos',
+    sortOrder: 20,
   },
   {
     id: 'docena-gallina',
@@ -49,6 +53,8 @@ export const products = [
     badge: 'Frescos de hoy',
     stock: 'Disponible',
     qty: 1,
+    stockStatus: 'disponible',
+    sortOrder: 30,
   },
   {
     id: 'media-docena',
@@ -62,6 +68,8 @@ export const products = [
     badge: 'Edición campo',
     stock: 'Disponible',
     qty: 1,
+    stockStatus: 'disponible',
+    sortOrder: 40,
   },
   {
     id: 'codorniz-24',
@@ -75,6 +83,8 @@ export const products = [
     badge: 'Frescos del día',
     stock: 'Quedan pocos',
     qty: 1,
+    stockStatus: 'pocos',
+    sortOrder: 50,
   },
   {
     id: 'codorniz-12',
@@ -88,11 +98,13 @@ export const products = [
     badge: 'Probalo',
     stock: 'Disponible',
     qty: 1,
+    stockStatus: 'disponible',
+    sortOrder: 60,
   },
   {
     id: 'pack-familiar',
     name: 'Pack Familiar: 2 maples + 1 pack codorniz',
-    category: 'todo',
+    category: 'pack',
     description: 'La elección del día para familias que quieren variedad, sabor y buen momento.',
     price: 22000,
     image: 'imagenes/granja-campo.jpg',
@@ -101,6 +113,8 @@ export const products = [
     badge: 'Más pedido',
     stock: 'Muy solicitado',
     qty: 1,
+    stockStatus: 'disponible',
+    sortOrder: 10,
   },
   {
     id: 'mayor',
@@ -114,12 +128,14 @@ export const products = [
     badge: 'Consultá precio',
     stock: 'Por mayor',
     qty: 1,
+    stockStatus: 'disponible',
+    sortOrder: 80,
     whatsappOnly: true,
   },
   {
     id: 'degustacion',
     name: 'Pack Degustación: 6 gallina + 12 codorniz',
-    category: 'todo',
+    category: 'pack',
     description: 'Un combo ideal para probar ambos tipos de huevo y armar una mesa distinta.',
     price: 4900,
     image: 'imagenes/maples-preparados.jpg',
@@ -128,6 +144,8 @@ export const products = [
     badge: 'Probalo',
     stock: 'Disponible',
     qty: 1,
+    stockStatus: 'disponible',
+    sortOrder: 70,
   },
 ];
 
@@ -136,4 +154,14 @@ export const filterDefinitions = [
   { value: 'gallina', label: 'Gallina' },
   { value: 'codorniz', label: 'Codorniz' },
   { value: 'mayor', label: 'Por mayor' },
+];
+
+// Zonas de RESPALDO para el carrito (las reales vienen de la tabla zones).
+export const fallbackZones = [
+  ...['Guernica', 'Presidente Perón', 'Alejandro Korn', 'San Vicente', 'Cañuelas', 'Brandsen', 'Ezeiza', 'Canning', 'Monte Grande']
+    .map((name) => ({ name, group_name: 'Cerca de la granja' })),
+  ...['Longchamps', 'Glew', 'Claypole', 'Burzaco', 'Adrogué', 'Temperley', 'Banfield', 'Lomas de Zamora', 'Llavallol', 'Lanús', 'Avellaneda', 'Quilmes', 'Bernal', 'Berazategui', 'Florencio Varela', 'Almirante Brown', 'Esteban Echeverría']
+    .map((name) => ({ name, group_name: 'Zona Sur' })),
+  ...['La Plata', 'Berisso', 'Ensenada'].map((name) => ({ name, group_name: 'La Plata y alrededores' })),
+  ...['CABA', 'Zona Oeste', 'Zona Norte', 'Otra'].map((name) => ({ name, group_name: 'Otras' })),
 ];

@@ -2777,3 +2777,33 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .nav-link::after, .mobile-nav-backdrop, .more-sheet, .cook-egg * { transition: none; }
 }
+
+/* ===== Pedidos registrados (Supabase): agotados, consentimiento y avisos ===== */
+.cart-drawer { overflow-y: auto; overscroll-behavior: contain; }
+.cart-drawer .cart-items { flex-shrink: 0; }
+.product-card.is-soldout .product-image img { filter: grayscale(1); opacity: .72; }
+.product-card.is-soldout .stock-badge { background: #4a4a44; color: #fffdf7; }
+.product-card.is-soldout .price { opacity: .7; }
+.add-button:disabled, .qty-box button:disabled, .product-detail-add:disabled { opacity: .55; cursor: not-allowed; }
+.add-button:disabled:hover { background: inherit; color: inherit; }
+.catalog-loading { grid-column: 1 / -1; margin: 0; padding: 2rem 1rem; text-align: center; font-weight: 700; }
+.zone-other-hint { margin: -.3rem 0 0; font-size: .88rem; font-weight: 700; color: var(--soil); }
+.form-grid label.consent-check { flex-direction: row; align-items: flex-start; gap: .6rem; font-size: .86rem; }
+.form-grid .consent-check input { flex: none; width: 1.2rem; height: 1.2rem; margin: .1rem 0 0; padding: 0; accent-color: var(--olive); }
+.consent-check a { text-decoration: underline; font-weight: 700; }
+.checkout-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.checkout-error { margin: .9rem 0 0; padding: .7rem .9rem; border-radius: 12px; background: #fbe3dc; color: #7a2412; font-size: .9rem; font-weight: 700; }
+.form-grid [aria-invalid="true"] { border-color: #b3261e; box-shadow: 0 0 0 2px rgba(179, 38, 30, .18); }
+.checkout-button[aria-busy="true"] { opacity: .8; cursor: progress; }
+.store-notice {
+  position: fixed; z-index: 60; left: 50%; bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  width: min(440px, calc(100% - 2rem)); transform: translateX(-50%);
+  padding: .85rem 1rem; border-radius: 14px; background: #3e4a30; color: #fffdf7;
+  box-shadow: 0 14px 30px rgba(20, 18, 14, .25); font-weight: 700; text-align: center;
+  pointer-events: none; /* avisa sin tapar los botones que tenga debajo */
+}
+[data-theme="night"] .zone-other-hint { color: var(--gold); }
+/* El carrito es un diálogo: mientras está abierto, la barra inferior y el botón flotante
+   no deben taparle el botón "Enviar pedido" en el celular. */
+body.cart-open .mobile-bottom-nav, body.cart-open .whatsapp-fab { display: none; }
+.cart-drawer { padding-bottom: calc(1.2rem + env(safe-area-inset-bottom)); }

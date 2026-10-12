@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#3e4a30" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Panel LP" />
+    <title>Panel · La Pastoril</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+    <link rel="apple-touch-icon" href="../imagenes/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Arbutus+Slab&family=Karla:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="admin.css" />
+    <script src="../config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="admin.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#panelMain">Saltar al contenido</a>
+
+    <!-- ================= LOGIN ================= -->
+    <section class="login-view" id="loginView" hidden>
+      <form class="login-card" id="loginForm" novalidate>
+        <span class="brand-mark" aria-hidden="true">LP</span>
+        <h1>Panel de La Pastoril</h1>
+        <p class="muted">Entrá con el email y la contraseña del dueño.</p>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="loginEmail" autocomplete="username" required />
+        </label>
+        <label class="field">
+          <span>Contraseña</span>
+          <input type="password" id="loginPassword" autocomplete="current-password" required />
+        </label>
+        <p class="form-error" id="loginError" role="alert" hidden></p>
+        <button class="btn btn-primary btn-block" type="submit" id="loginSubmit">Entrar</button>
+        <a class="link" href="../">Volver a la tienda</a>
+      </form>
+    </section>
+
+    <!-- ================= PANEL ================= -->
+    <div class="panel" id="panelView" hidden>
+      <header class="topbar">
+        <div class="topbar-brand">
+          <span class="brand-mark" aria-hidden="true">LP</span>
+          <div>
+            <strong>La Pastoril</strong>
+            <span class="live-dot" id="liveIndicator" data-state="off">Conectando…</span>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" type="button" id="soundToggle" aria-pressed="false" title="Sonido de pedidos nuevos">
+            <span aria-hidden="true">🔇</span><span class="sr-only">Activar sonido de pedidos nuevos</span>
+          </button>
+          <button class="icon-btn" type="button" id="notifyToggle" title="Notificaciones del navegador">
+            <span aria-hidden="true">🔔</span><span class="sr-only">Activar notificaciones</span>
+          </button>
+          <a class="icon-btn" href="../" target="_blank" rel="noopener" title="Ver la tienda">
+            <span aria-hidden="true">🛒</span><span class="sr-only">Ver la tienda</span>
+          </a>
+          <button class="btn btn-ghost btn-small" type="button" id="logoutButton">Salir</button>
+        </div>
+      </header>
+
+      <nav class="tabs" role="tablist" aria-label="Secciones del panel">
+        <button role="tab" type="button" data-tab="pedidos" aria-selected="true" aria-controls="tab-pedidos" id="tabbtn-pedidos">
+          <span aria-hidden="true">📋</span> Pedidos <span class="tab-count" id="countNew" hidden></span>
+        </button>
+        <button role="tab" type="button" data-tab="estadisticas" aria-selected="false" aria-controls="tab-estadisticas" id="tabbtn-estadisticas">
+          <span aria-hidden="true">📈</span> Estadísticas
+        </button>
+        <button role="tab" type="button" data-tab="resenas" aria-selected="false" aria-controls="tab-resenas" id="tabbtn-resenas">
+          <span aria-hidden="true">⭐</span> Reseñas <span class="tab-count" id="countReviews" hidden></span>
+        </button>
+        <button role="tab" type="button" data-tab="productos" aria-selected="false" aria-controls="tab-productos" id="tabbtn-productos">
+          <span aria-hidden="true">🥚</span> Productos
+        </button>
+        <button role="tab" type="button" data-tab="ajustes" aria-selected="false" aria-controls="tab-ajustes" id="tabbtn-ajustes">
+          <span aria-hidden="true">⚙️</span> Ajustes
+        </button>
+      </nav>
+
+      <main id="panelMain" tabindex="-1">
+        <!-- ---------- PEDIDOS ---------- -->
+        <section class="tab-panel" id="tab-pedidos" role="tabpanel" aria-labelledby="tabbtn-pedidos">
+          <div class="section-head">
+            <h1>Pedidos</h1>
+            <button class="btn btn-secondary" type="button" id="routeButton">🗺️ Armar recorrido de hoy</button>
+          </div>
+          <div class="chips" role="group" aria-label="Filtrar pedidos" id="orderFilters">
+            <button type="button" class="chip" data-filter="hoy" aria-pressed="true">Hoy <span data-count="hoy"></span></button>
+            <button type="button" class="chip" data-filter="nuevos" aria-pressed="false">Nuevos <span data-count="nuevos"></span></button>
+            <button type="button" class="chip" data-filter="confirmados" aria-pressed="false">Confirmados <span data-count="confirmados"></span></button>
+            <button type="button" class="chip" data-filter="revisar" aria-pressed="false">Para revisar <span data-count="revisar"></span></button>
+            <button type="button" class="chip" data-filter="todos" aria-pressed="false">Todos <span data-count="todos"></span></button>
+          </div>
+          <p class="hint" id="orderFilterHint"></p>
+          <div class="order-list" id="orderList" aria-live="polite"></div>
+        </section>
+
+        <!-- ---------- ESTADÍSTICAS ---------- -->
+        <section class="tab-panel" id="tab-estadisticas" role="tabpanel" aria-labelledby="tabbtn-estadisticas" hidden>
+          <div class="section-head">
+            <h1>Estadísticas</h1>
+            <div class="inline-actions">
+              <label class="compact-field">
+                <span>Período</span>
+                <select id="statsRange">
+                  <option value="7">Últimos 7 días</option>
+                  <option value="30" selected>Últimos 30 días</option>
+                  <option value="90">Últimos 90 días</option>
+                </select>
+              </label>
+              <button class="btn btn-secondary" type="button" id="exportCsv">⬇️ Exportar CSV</button>
+            </div>
+          </div>
+          <p class="hint">Solo cuentan como venta los pedidos <strong>confirmados</strong> y <strong>entregados</strong>.</p>
+          <div class="kpi-grid" id="kpiSales"></div>
+          <div class="kpi-grid" id="kpiRates"></div>
+          <div class="card">
+            <h2>Ventas por día</h2>
+            <div id="salesChart" class="chart"></div>
+          </div>
+          <div class="two-cols">
+            <div class="card">
+              <h2>Ranking por zona</h2>
+              <div id="zoneRanking"></div>
+            </div>
+            <div class="card">
+              <h2>Por producto</h2>
+              <div id="productRanking"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---------- RESEÑAS ---------- -->
+        <section class="tab-panel" id="tab-resenas" role="tabpanel" aria-labelledby="tabbtn-resenas" hidden>
+          <div class="section-head"><h1>Reseñas</h1></div>
+          <p class="hint">Las reseñas aprobadas aparecen en la sección Clientes de la tienda, solo con nombre de pila y barrio.</p>
+          <h2>Pendientes</h2>
+          <div class="review-list" id="pendingReviews"></div>
+          <details class="card">
+            <summary>Publicadas en la web</summary>
+            <div class="review-list" id="approvedReviews"></div>
+          </details>
+        </section>
+
+        <!-- ---------- PRODUCTOS ---------- -->
+        <section class="tab-panel" id="tab-productos" role="tabpanel" aria-labelledby="tabbtn-productos" hidden>
+          <div class="section-head">
+            <h1>Productos</h1>
+            <div class="inline-actions">
+              <button class="btn btn-secondary" type="button" id="openPrices">💲 Actualizar precios</button>
+              <button class="btn btn-primary" type="button" id="addProduct">＋ Agregar producto</button>
+            </div>
+          </div>
+          <div class="filters-bar">
+            <label class="compact-field grow">
+              <span>Buscar</span>
+              <input type="search" id="productSearch" placeholder="Nombre del producto" />
+            </label>
+            <label class="compact-field">
+              <span>Categoría</span>
+              <select id="productCategoryFilter">
+                <option value="">Todas</option>
+                <option value="gallina">Gallina</option>
+                <option value="codorniz">Codorniz</option>
+                <option value="pack">Pack</option>
+                <option value="mayor">Por mayor</option>
+              </select>
+            </label>
+            <label class="compact-field">
+              <span>Estado</span>
+              <select id="productStatusFilter">
+                <option value="">Todos</option>
+                <option value="visible">Visibles</option>
+                <option value="oculto">Ocultos</option>
+                <option value="agotado">Agotados</option>
+              </select>
+            </label>
+          </div>
+          <p class="hint" id="reorderHint">Para cambiar el orden de la tienda, arrastrá ⠿ o usá las flechas.</p>
+          <div class="product-table" id="productTable">
+            <div class="product-row product-head-row" aria-hidden="true">
+              <span></span><span>Foto</span><span>Producto</span><span>Categoría</span><span>Precio</span><span>Stock</span><span>Visible</span><span>Acciones</span>
+            </div>
+            <ul class="product-list" id="productList"></ul>
+          </div>
+          <details class="card" id="trashBox">
+            <summary>🗑️ Papelera <span id="trashCount"></span></summary>
+            <p class="hint">Los productos eliminados quedan 30 días acá. Después se borran solos (con su foto, si no la usa otro producto).</p>
+            <ul class="trash-list" id="trashList"></ul>
+          </details>
+        </section>
+
+        <!-- ---------- AJUSTES ---------- -->
+        <section class="tab-panel" id="tab-ajustes" role="tabpanel" aria-labelledby="tabbtn-ajustes" hidden>
+          <div class="section-head"><h1>Ajustes</h1></div>
+
+          <form class="card form-stack" id="farmForm" novalidate>
+            <h2>Ubicación de la granja</h2>
+            <p class="hint">Se usa para ordenar los pedidos por cercanía y como punto de partida del recorrido.</p>
+            <label class="field"><span>Nombre</span><input type="text" id="farmName" maxlength="80" required /></label>
+            <div class="field-row">
+              <label class="field"><span>Latitud</span><input type="number" id="farmLat" step="any" min="-90" max="90" required /></label>
+              <label class="field"><span>Longitud</span><input type="number" id="farmLng" step="any" min="-180" max="180" required /></label>
+            </div>
+            <div class="inline-actions">
+              <button class="btn btn-ghost" type="button" id="useMyLocation">📍 Usar mi ubicación actual</button>
+              <button class="btn btn-primary" type="submit">Guardar ubicación</button>
+            </div>
+          </form>
+
+          <form class="card form-stack" id="businessForm" novalidate>
+            <h2>Negocio</h2>
+            <label class="field"><span>Nombre del negocio</span><input type="text" id="businessName" maxlength="60" required /></label>
+            <label class="field">
+              <span>WhatsApp (con código de país, solo números)</span>
+              <input type="tel" id="whatsappNumber" inputmode="numeric" placeholder="5491176254150" required />
+            </label>
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </form>
+
+          <form class="card form-stack" id="passwordForm" novalidate>
+            <h2>Cambiar contraseña</h2>
+            <label class="field"><span>Nueva contraseña (mínimo 8 caracteres)</span><input type="password" id="newPassword" autocomplete="new-password" minlength="8" required /></label>
+            <label class="field"><span>Repetila</span><input type="password" id="repeatPassword" autocomplete="new-password" minlength="8" required /></label>
+            <button class="btn btn-primary" type="submit">Cambiar contraseña</button>
+          </form>
+
+          <div class="card">
+            <h2>Zonas de entrega</h2>
+            <p class="hint">Las coordenadas son el centro aproximado de cada localidad. Podés buscarlas en Google Maps: clic derecho sobre el lugar → copiar los números.</p>
+            <datalist id="zoneGroups">
+              <option value="Cerca de la granja"></option>
+              <option value="Zona Sur"></option>
+              <option value="La Plata y alrededores"></option>
+              <option value="Otras"></option>
+            </datalist>
+            <div class="zone-table" id="zoneTable"></div>
+            <form class="zone-row zone-new" id="zoneAddForm" novalidate>
+              <input type="text" id="zoneNewName" placeholder="Nueva zona" maxlength="60" aria-label="Nombre de la nueva zona" required />
+              <input type="text" id="zoneNewGroup" list="zoneGroups" placeholder="Grupo" maxlength="60" aria-label="Grupo de la nueva zona" />
+              <input type="number" id="zoneNewLat" step="any" placeholder="Latitud" aria-label="Latitud" />
+              <input type="number" id="zoneNewLng" step="any" placeholder="Longitud" aria-label="Longitud" />
+              <button class="btn btn-primary btn-small" type="submit">Agregar</button>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- ================= DIÁLOGOS ================= -->
+    <dialog class="sheet" id="productDialog" aria-labelledby="productDialogTitle">
+      <form id="productForm" class="form-stack" novalidate>
+        <div class="sheet-head">
+          <h2 id="productDialogTitle">Producto</h2>
+          <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar">✕</button>
+        </div>
+        <label class="field"><span>Nombre *</span><input type="text" id="pName" maxlength="120" required /></label>
+        <label class="field"><span>Descripción corta</span><textarea id="pDescription" rows="3" maxlength="600"></textarea></label>
+        <div class="field-row">
+          <label class="field">
+            <span>Categoría</span>
+            <select id="pCategory">
+              <option value="gallina">Gallina</option>
+              <option value="codorniz">Codorniz</option>
+              <option value="pack">Pack</option>
+              <option value="mayor">Por mayor</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Estado de stock</span>
+            <select id="pStock">
+              <option value="disponible">Disponible</option>
+              <option value="pocos">Quedan pocos</option>
+              <option value="agotado">Agotado</option>
+            </select>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="pWhatsappOnly" /> <span>Solo consulta por WhatsApp (sin precio ni botón de carrito)</span></label>
+        <label class="field" id="pPriceField">
+          <span>Precio en pesos *</span>
+          <input type="number" id="pPrice" min="1" step="1" inputmode="numeric" />
+          <small class="muted" id="pPriceNote" hidden>El cambio de precio queda registrado en el historial.</small>
+        </label>
+        <label class="field">
+          <span>Insignia (opcional)</span>
+          <input type="text" id="pBadge" maxlength="40" list="badgeSuggestions" placeholder="Ej: Más pedido" />
+          <datalist id="badgeSuggestions">
+            <option value="Más pedido"></option>
+            <option value="Recién puestos"></option>
+            <option value="Frescos de hoy"></option>
+            <option value="Probalo"></option>
+            <option value="Nuevo"></option>
+          </datalist>
+        </label>
+        <label class="check"><input type="checkbox" id="pActive" checked /> <span>Visible en la tienda</span></label>
+
+        <fieldset class="photo-box">
+          <legend>Foto</legend>
+          <div class="photo-preview" id="pPhotoPreview"><span class="muted">Sin foto</span></div>
+          <div class="inline-actions">
+            <label class="btn btn-secondary file-btn">
+              📷 Subir foto
+              <input type="file" id="pPhotoFile" accept="image/*" />
+            </label>
+            <button class="btn btn-ghost" type="button" id="pPhotoRemove">Quitar foto</button>
+          </div>
+          <label class="field">
+            <span>…o pegá la dirección (URL) de una imagen</span>
+            <input type="url" id="pPhotoUrl" placeholder="https://…" />
+          </label>
+          <small class="muted">Se achica sola a 1200 px y se comprime antes de subir.</small>
+        </fieldset>
+
+        <p class="form-error" id="productFormError" role="alert" hidden></p>
+        <div class="sheet-actions">
+          <button class="btn btn-ghost" type="button" data-close-dialog>Cancelar</button>
+          <button class="btn btn-primary" type="submit" id="productSave">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="sheet" id="priceDialog" aria-labelledby="priceDialogTitle">
+      <form id="priceForm" class="form-stack" novalidate>
+        <div class="sheet-head">
+          <h2 id="priceDialogTitle">Actualizar precios</h2>
+          <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar">✕</button>
+        </div>
+        <label class="field">
+          <span>¿A qué productos?</span>
+          <select id="priceScope">
+            <option value="">Todos los productos</option>
+            <option value="gallina">Gallina</option>
+            <option value="codorniz">Codorniz</option>
+            <option value="pack">Pack</option>
+            <option value="mayor">Por mayor</option>
+          </select>
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span>Tipo</span>
+            <select id="priceDirection">
+              <option value="1">Aumento</option>
+              <option value="-1">Descuento</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>En</span>
+            <select id="priceMode">
+              <option value="porcentaje">Porcentaje (%)</option>
+              <option value="monto">Monto fijo ($)</option>
+            </select>
+          </label>
+        </div>
+        <div class="field-row">
+          <label class="field"><span>Valor</span><input type="number" id="priceValue" min="0" step="any" inputmode="decimal" placeholder="Ej: 10" /></label>
+          <label class="field">
+            <span>Redondeo</span>
+            <select id="priceRounding">
+              <option value="0">Sin redondeo</option>
+              <option value="50" selected>A $50</option>
+              <option value="100">A $100</option>
+            </select>
+          </label>
+        </div>
+        <div class="price-preview" id="pricePreview" aria-live="polite"></div>
+        <p class="form-error" id="priceFormError" role="alert" hidden></p>
+        <div class="sheet-actions">
+          <button class="btn btn-ghost" type="button" data-close-dialog>Cancelar</button>
+          <button class="btn btn-primary" type="submit" id="priceApply">Aplicar cambios</button>
+        </div>
+        <details class="card">
+          <summary>Historial de cambios</summary>
+          <button class="btn btn-danger btn-small" type="button" id="undoPrices" hidden>↩️ Deshacer última actualización</button>
+          <div id="priceHistory"></div>
+        </details>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="confirmDialog" aria-labelledby="confirmTitle">
+      <form method="dialog" class="form-stack" id="confirmForm">
+        <h2 id="confirmTitle"></h2>
+        <p id="confirmMessage"></p>
+        <label class="field" id="confirmTextField" hidden>
+          <span id="confirmTextLabel"></span>
+          <input type="text" id="confirmText" autocomplete="off" />
+        </label>
+        <div class="sheet-actions">
+          <button class="btn btn-ghost" value="cancel" type="submit">Cancelar</button>
+          <button class="btn btn-secondary" value="extra" type="submit" id="confirmExtra" hidden></button>
+          <button class="btn btn-primary" value="confirm" type="submit" id="confirmOk"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+  </body>
+</html>
