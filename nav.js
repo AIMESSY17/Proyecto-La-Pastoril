@@ -7,7 +7,7 @@ const mobileNavBackdrop = document.getElementById('mobileNavBackdrop');
 
 export function focusableWithin(element) {
   return [...element.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
-    .filter((item) => !item.hasAttribute('hidden'));
+    .filter((item) => item.getClientRects().length > 0);
 }
 
 function syncHash() {

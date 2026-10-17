@@ -11,16 +11,52 @@
     <link rel="manifest" href="manifest.json" />
     <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
     <link rel="apple-touch-icon" href="../imagenes/apple-touch-icon.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Arbutus+Slab&family=Karla:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="preload" href="../fuentes/karla-variable.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      // Tema elegido por el dueño (claro u oscuro); sin elección, sigue al dispositivo.
+      try {
+        var theme = localStorage.getItem('lp-admin-theme');
+        if (theme === 'dark' || theme === 'light') document.documentElement.dataset.theme = theme;
+      } catch (error) { /* sin almacenamiento: tema automático */ }
+    </script>
     <link rel="stylesheet" href="admin.css" />
-    <script src="../config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../config.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
     <script type="module" src="admin.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#panelMain">Saltar al contenido</a>
+    <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+      <symbol id="i-list" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3" /></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4m0 16h16M8 16v-4m4 4V8m4 8v-6" /></symbol>
+      <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.900.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z" /></symbol>
+      <symbol id="i-egg" viewBox="0 0 24 24"><path d="M12 3c-3.3 0-6 5-6 9.5a6 6 0 0 0 12 0C18 8 15.3 3 12 3Z" /></symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 3v2.5m0 13V21m9-9h-2.5m-13 0H3m15.4-6.4-1.8 1.8M7.4 16.6l-1.8 1.8m12.8 0-1.8-1.8M7.4 7.4 5.6 5.6" /></symbol>
+      <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5ZM15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" /></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5ZM16 9.5l5 5m0-5-5 5" /></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15ZM10 20.5a2.2 2.2 0 0 0 4 0" /></symbol>
+      <symbol id="i-bell-on" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15ZM10 20.5a2.2 2.2 0 0 0 4 0M3.5 8A8 8 0 0 1 6 4m14.5 4A8 8 0 0 0 18 4" /></symbol>
+      <symbol id="i-store" viewBox="0 0 24 24"><path d="M3 4h2l2.1 10.1a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 1.9-1.4L21 8H6" /><circle cx="10" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></symbol>
+      <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5" /><circle cx="18" cy="6" r="2.5" /><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5" /></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19.5h14" /></symbol>
+      <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.5V4.5h8l9 9-8 8Z" /><circle cx="8" cy="9" r="1.3" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13M10 11v6m4-6v6" /></symbol>
+      <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.8-6.5-10.5a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21Z" /><circle cx="12" cy="10.5" r="2.3" /></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3.5L9 5.5h6L16.5 8H20v11H4Z" /><circle cx="12" cy="13" r="3.3" /></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M8 5 4 9l4 4M4 9h10a5 5 0 0 1 0 10h-3" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" /></symbol>
+      <symbol id="i-box" viewBox="0 0 24 24"><path d="m4 8 8-4 8 4v8l-8 4-8-4Zm0 0 8 4 8-4m-8 4v8" /></symbol>
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20.5 11.8a8.3 8.3 0 0 1-12.2 7.3L3.5 20.5l1.4-4.7A8.3 8.3 0 1 1 20.5 11.8Z" /></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3A4 4 0 0 0 13 5.3l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3A4 4 0 0 0 11 18.7l1-1" /></symbol>
+      <symbol id="i-grip" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" /><circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" /><circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" /></g></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 15.1A8.5 8.5 0 0 1 8.9 3.5a8.7 8.7 0 1 0 11.6 11.6Z" /></symbol>
+      <symbol id="i-theme-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17Z" fill="currentColor" /></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4.5 4.5" /></symbol>
+      <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" /></symbol>
+    </svg>
 
     <!-- ================= LOGIN ================= -->
     <section class="login-view" id="loginView" hidden>
@@ -54,13 +90,19 @@
         </div>
         <div class="topbar-actions">
           <button class="icon-btn" type="button" id="soundToggle" aria-pressed="false" title="Sonido de pedidos nuevos">
-            <span aria-hidden="true">🔇</span><span class="sr-only">Activar sonido de pedidos nuevos</span>
+            <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-mute" /></svg></span><span class="sr-only">Activar sonido de pedidos nuevos</span>
           </button>
           <button class="icon-btn" type="button" id="notifyToggle" title="Notificaciones del navegador">
-            <span aria-hidden="true">🔔</span><span class="sr-only">Activar notificaciones</span>
+            <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-bell" /></svg></span><span class="sr-only">Activar notificaciones</span>
+          </button>
+          <button class="icon-btn" type="button" id="themeToggle" title="Tema automático">
+            <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-theme-auto" /></svg></span><span class="sr-only">Cambiar tema</span>
+          </button>
+          <button class="icon-btn shortcuts-btn" type="button" id="shortcutsButton" title="Atajos de teclado">
+            <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-keyboard" /></svg></span><span class="sr-only">Ver atajos de teclado</span>
           </button>
           <a class="icon-btn" href="../" target="_blank" rel="noopener" title="Ver la tienda">
-            <span aria-hidden="true">🛒</span><span class="sr-only">Ver la tienda</span>
+            <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-store" /></svg></span><span class="sr-only">Ver la tienda</span>
           </a>
           <button class="btn btn-ghost btn-small" type="button" id="logoutButton">Salir</button>
         </div>
@@ -68,19 +110,19 @@
 
       <nav class="tabs" role="tablist" aria-label="Secciones del panel">
         <button role="tab" type="button" data-tab="pedidos" aria-selected="true" aria-controls="tab-pedidos" id="tabbtn-pedidos">
-          <span aria-hidden="true">📋</span> Pedidos <span class="tab-count" id="countNew" hidden></span>
+          <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-list" /></svg></span> Pedidos <span class="tab-count" id="countNew" hidden></span>
         </button>
         <button role="tab" type="button" data-tab="estadisticas" aria-selected="false" aria-controls="tab-estadisticas" id="tabbtn-estadisticas">
-          <span aria-hidden="true">📈</span> Estadísticas
+          <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-chart" /></svg></span> Estadísticas
         </button>
         <button role="tab" type="button" data-tab="resenas" aria-selected="false" aria-controls="tab-resenas" id="tabbtn-resenas">
-          <span aria-hidden="true">⭐</span> Reseñas <span class="tab-count" id="countReviews" hidden></span>
+          <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-star" /></svg></span> Reseñas <span class="tab-count" id="countReviews" hidden></span>
         </button>
         <button role="tab" type="button" data-tab="productos" aria-selected="false" aria-controls="tab-productos" id="tabbtn-productos">
-          <span aria-hidden="true">🥚</span> Productos
+          <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-egg" /></svg></span> Productos
         </button>
         <button role="tab" type="button" data-tab="ajustes" aria-selected="false" aria-controls="tab-ajustes" id="tabbtn-ajustes">
-          <span aria-hidden="true">⚙️</span> Ajustes
+          <span aria-hidden="true"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-gear" /></svg></span> Ajustes
         </button>
       </nav>
 
@@ -89,8 +131,13 @@
         <section class="tab-panel" id="tab-pedidos" role="tabpanel" aria-labelledby="tabbtn-pedidos">
           <div class="section-head">
             <h1>Pedidos</h1>
-            <button class="btn btn-secondary" type="button" id="routeButton">🗺️ Armar recorrido de hoy</button>
+            <button class="btn btn-secondary" type="button" id="routeButton"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-route" /></svg> Armar recorrido de hoy</button>
           </div>
+          <label class="search-field" for="orderSearch">
+            <span class="sr-only">Buscar pedidos por nombre o número</span>
+            <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-search" /></svg>
+            <input type="search" id="orderSearch" placeholder="Buscar por nombre o N° de pedido" autocomplete="off" enterkeyhint="search" />
+          </label>
           <div class="chips" role="group" aria-label="Filtrar pedidos" id="orderFilters">
             <button type="button" class="chip" data-filter="hoy" aria-pressed="true">Hoy <span data-count="hoy"></span></button>
             <button type="button" class="chip" data-filter="nuevos" aria-pressed="false">Nuevos <span data-count="nuevos"></span></button>
@@ -115,7 +162,7 @@
                   <option value="90">Últimos 90 días</option>
                 </select>
               </label>
-              <button class="btn btn-secondary" type="button" id="exportCsv">⬇️ Exportar CSV</button>
+              <button class="btn btn-secondary" type="button" id="exportCsv"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-download" /></svg> Exportar CSV</button>
             </div>
           </div>
           <p class="hint">Solo cuentan como venta los pedidos <strong>confirmados</strong> y <strong>entregados</strong>.</p>
@@ -154,8 +201,8 @@
           <div class="section-head">
             <h1>Productos</h1>
             <div class="inline-actions">
-              <button class="btn btn-secondary" type="button" id="openPrices">💲 Actualizar precios</button>
-              <button class="btn btn-primary" type="button" id="addProduct">＋ Agregar producto</button>
+              <button class="btn btn-secondary" type="button" id="openPrices"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-tag" /></svg> Actualizar precios</button>
+              <button class="btn btn-primary" type="button" id="addProduct"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-plus" /></svg> Agregar producto</button>
             </div>
           </div>
           <div class="filters-bar">
@@ -183,7 +230,7 @@
               </select>
             </label>
           </div>
-          <p class="hint" id="reorderHint">Para cambiar el orden de la tienda, arrastrá ⠿ o usá las flechas.</p>
+          <p class="hint" id="reorderHint">Para cambiar el orden de la tienda, arrastrá desde los puntitos o usá las flechas.</p>
           <div class="product-table" id="productTable">
             <div class="product-row product-head-row" aria-hidden="true">
               <span></span><span>Foto</span><span>Producto</span><span>Categoría</span><span>Precio</span><span>Stock</span><span>Visible</span><span>Acciones</span>
@@ -191,7 +238,7 @@
             <ul class="product-list" id="productList"></ul>
           </div>
           <details class="card" id="trashBox">
-            <summary>🗑️ Papelera <span id="trashCount"></span></summary>
+            <summary><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-trash" /></svg> Papelera <span id="trashCount"></span></summary>
             <p class="hint">Los productos eliminados quedan 30 días acá. Después se borran solos (con su foto, si no la usa otro producto).</p>
             <ul class="trash-list" id="trashList"></ul>
           </details>
@@ -210,7 +257,7 @@
               <label class="field"><span>Longitud</span><input type="number" id="farmLng" step="any" min="-180" max="180" required /></label>
             </div>
             <div class="inline-actions">
-              <button class="btn btn-ghost" type="button" id="useMyLocation">📍 Usar mi ubicación actual</button>
+              <button class="btn btn-ghost" type="button" id="useMyLocation"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-pin" /></svg> Usar mi ubicación actual</button>
               <button class="btn btn-primary" type="submit">Guardar ubicación</button>
             </div>
           </form>
@@ -259,7 +306,7 @@
       <form id="productForm" class="form-stack" novalidate>
         <div class="sheet-head">
           <h2 id="productDialogTitle">Producto</h2>
-          <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar">✕</button>
+          <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close" /></svg></button>
         </div>
         <label class="field"><span>Nombre *</span><input type="text" id="pName" maxlength="120" required /></label>
         <label class="field"><span>Descripción corta</span><textarea id="pDescription" rows="3" maxlength="600"></textarea></label>
@@ -306,7 +353,7 @@
           <div class="photo-preview" id="pPhotoPreview"><span class="muted">Sin foto</span></div>
           <div class="inline-actions">
             <label class="btn btn-secondary file-btn">
-              📷 Subir foto
+              <svg class="ico" aria-hidden="true" focusable="false"><use href="#i-camera" /></svg> Subir foto
               <input type="file" id="pPhotoFile" accept="image/*" />
             </label>
             <button class="btn btn-ghost" type="button" id="pPhotoRemove">Quitar foto</button>
@@ -330,7 +377,7 @@
       <form id="priceForm" class="form-stack" novalidate>
         <div class="sheet-head">
           <h2 id="priceDialogTitle">Actualizar precios</h2>
-          <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar">✕</button>
+          <button class="icon-btn" type="button" data-close-dialog aria-label="Cerrar"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-close" /></svg></button>
         </div>
         <label class="field">
           <span>¿A qué productos?</span>
@@ -377,7 +424,7 @@
         </div>
         <details class="card">
           <summary>Historial de cambios</summary>
-          <button class="btn btn-danger btn-small" type="button" id="undoPrices" hidden>↩️ Deshacer última actualización</button>
+          <button class="btn btn-danger btn-small" type="button" id="undoPrices" hidden><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-undo" /></svg> Deshacer última actualización</button>
           <div id="priceHistory"></div>
         </details>
       </form>
@@ -396,6 +443,21 @@
           <button class="btn btn-secondary" value="extra" type="submit" id="confirmExtra" hidden></button>
           <button class="btn btn-primary" value="confirm" type="submit" id="confirmOk"></button>
         </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="shortcutsDialog" aria-labelledby="shortcutsTitle">
+      <form method="dialog" class="form-stack">
+        <h2 id="shortcutsTitle">Atajos de teclado</h2>
+        <dl class="shortcut-list">
+          <div><dt><kbd>1</kbd> a <kbd>5</kbd></dt><dd>Cambiar de sección</dd></div>
+          <div><dt><kbd>/</kbd></dt><dd>Buscar pedidos (o productos)</dd></div>
+          <div><dt><kbd>N</kbd></dt><dd>Agregar un producto</dd></div>
+          <div><dt><kbd>R</kbd></dt><dd>Armar el recorrido de hoy</dd></div>
+          <div><dt><kbd>T</kbd></dt><dd>Cambiar tema (automático, oscuro, claro)</dd></div>
+          <div><dt><kbd>?</kbd></dt><dd>Ver esta ayuda</dd></div>
+        </dl>
+        <div class="sheet-actions"><button class="btn btn-primary" type="submit">Entendido</button></div>
       </form>
     </dialog>
 

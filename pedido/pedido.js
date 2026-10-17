@@ -25,10 +25,10 @@ function showView(id) {
   ['viewLoading', 'viewMessage', 'viewOrder', 'viewThanks'].forEach((view) => { $(view).hidden = view !== id; });
 }
 
-function showMessage(title, text, icon = '🥚') {
+function showMessage(title, text, icon = 'egg') {
   $('messageTitle').textContent = title;
   $('messageText').textContent = text;
-  $('messageIcon').textContent = icon;
+  $('messageIcon').querySelector('use').setAttribute('href', `#p-${icon}`); // ícono SVG: egg, hen o signal
   showView('viewMessage');
 }
 
@@ -44,7 +44,7 @@ async function loadOrder() {
   }
   const { data, error } = await sb.rpc('get_order_for_customer', { p_id: orderId, p_token: token });
   if (error) {
-    showMessage('No pudimos cargar tu pedido', 'Revisá tu conexión y volvé a abrir el enlace en un ratito.', '📡');
+    showMessage('No pudimos cargar tu pedido', 'Revisá tu conexión y volvé a abrir el enlace en un ratito.', 'signal');
     return;
   }
   if (!data) {
@@ -56,7 +56,7 @@ async function loadOrder() {
     return;
   }
   if (data.ya_confirmado) {
-    showMessage('¡Ya está confirmado!', `Ya nos avisaste que recibiste el pedido ${data.id}. ¡Gracias por elegirnos!`, '🐔');
+    showMessage('¡Ya está confirmado!', `Ya nos avisaste que recibiste el pedido ${data.id}. ¡Gracias por elegirnos!`, 'hen');
     return;
   }
 

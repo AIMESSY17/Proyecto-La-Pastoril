@@ -1,15 +1,17 @@
-import { CART_THRESHOLD, fallbackZones, filterDefinitions, imageDimensions, products as localProducts, STORAGE_KEYS } from './data/products.js';
+import { CART_THRESHOLD, fallbackZones, filterDefinitions, products as localProducts, STORAGE_KEYS } from './data/products.js';
 import { initCooking } from './cooking.js';
 import { persistCart, readStoredCart, reconcileCart } from './cart.js';
 import { getFilteredProducts } from './catalog.js';
 import { buildOrderMessage, createWhatsAppUrl, getWhatsAppNumber, goToWhatsApp, openWhatsApp, setWhatsAppNumber } from './whatsapp.js';
 import { focusableWithin, initNavigation, initTabs, setActiveHash } from './nav.js';
 import { restoreThemePreference } from './theme.js';
+import { DEFAULT_IMAGE, escapeHtml, imageUrl, pictureMarkup } from './images.js';
 import * as backend from './store-backend.js';
 
 const STOCK_LABELS = { disponible: 'Disponible', pocos: 'Quedan pocos', agotado: 'Agotado' };
-const DEFAULT_PRODUCT_IMAGE = 'imagenes/huevos-campo.jpg';
 const ZONE_GROUP_ORDER = ['Cerca de la granja', 'Zona Sur', 'La Plata y alrededores', 'Otras'];
+const MAX_QUANTITY = 50;
+const CARD_SIZES = '(min-width: 1280px) 280px, (min-width: 768px) 30vw, 50vw';
 
 // Catálogo vigente: arranca vacío y se completa desde Supabase (o el respaldo local).
 let products = [];
@@ -18,8 +20,7 @@ let catalogSource = 'none';
 const state = {
   currentFilter: 'all',
   cart: readStoredCart(STORAGE_KEYS.cart),
-  activeHash: window.location.hash || '#comprar',
-  justAddedProductId: null,
+  step: 1,
 };
 let cartOpenedAt = null;
 let checkoutInFlight = false;
@@ -31,106 +32,161 @@ const currency = new Intl.NumberFormat('es-AR', {
   maximumFractionDigits: 0,
 });
 
-const catalogGrid = document.getElementById('catalogGrid');
-const filterChips = document.getElementById('filterChips');
-const cartDrawer = document.getElementById('cartDrawer');
-const cartOverlay = document.getElementById('cartOverlay');
-const cartItems = document.getElementById('cartItems');
-const cartCountMini = document.getElementById('cartCountMini');
-const checkoutButton = document.getElementById('checkoutButton');
-const customerName = document.getElementById('customerName');
-const customerZone = document.getElementById('customerZone');
-const deliveryDay = document.getElementById('deliveryDay');
-const customerNotes = document.getElementById('customerNotes');
-const customerPhone = document.getElementById('customerPhone');
-const customerConsent = document.getElementById('customerConsent');
-const customerWebsite = document.getElementById('customerWebsite');
-const zoneOtherHint = document.getElementById('zoneOtherHint');
-const checkoutError = document.getElementById('checkoutError');
-const storeNotice = document.getElementById('storeNotice');
-const promoText = document.getElementById('promoText');
-const promoProgress = document.getElementById('promoProgress');
-const subtotalValue = document.getElementById('subtotalValue');
-const totalValue = document.getElementById('totalValue');
-const loader = document.getElementById('loader');
-const timeGreeting = document.getElementById('timeGreeting');
-const cartToggle = document.getElementById('cartToggle');
-const lightbox = document.getElementById('lightbox');
-const lightboxImage = document.getElementById('lightboxImage');
-const lightboxPrev = document.getElementById('lightboxPrev');
-const lightboxNext = document.getElementById('lightboxNext');
-const galleryImages = [...document.querySelectorAll('.gallery-item img')];
-const faqItems = [...document.querySelectorAll('.accordion-item')];
-const peopleRange = document.getElementById('peopleRange');
-const daysRange = document.getElementById('daysRange');
-const peopleValue = document.getElementById('peopleValue');
-const daysValue = document.getElementById('daysValue');
-const packRecommendation = document.getElementById('packRecommendation');
-const addRecommendedPack = document.getElementById('addRecommendedPack');
-const catalogSearch = document.getElementById('catalogSearch');
-const catalogSort = document.getElementById('catalogSort');
-const zoneSelect = document.getElementById('zoneSelect');
-const zoneResult = document.getElementById('zoneResult');
-const tabWave = document.getElementById('tabWave');
-const nightToggle = document.getElementById('nightToggle');
-const fieldParticles = document.getElementById('fieldParticles');
-const productModal = document.getElementById('productModal');
-const eggCursor = document.getElementById('eggCursor');
+const $ = (id) => document.getElementById(id);
+const catalogGrid = $('catalogGrid');
+const catalogStatus = $('catalogStatus');
+const filterChips = $('filterChips');
+const cartDrawer = $('cartDrawer');
+const cartOverlay = $('cartOverlay');
+const cartItems = $('cartItems');
+const cartCountMini = $('cartCountMini');
+const cartTotalMini = $('cartTotalMini');
+const cartNext = $('cartNext');
+const cartBack = $('cartBack');
+const cartFooterHint = $('cartFooterHint');
+const checkoutButton = $('checkoutButton');
+const customerName = $('customerName');
+const customerZone = $('customerZone');
+const deliveryDay = $('deliveryDay');
+const customerNotes = $('customerNotes');
+const customerPhone = $('customerPhone');
+const customerConsent = $('customerConsent');
+const customerWebsite = $('customerWebsite');
+const rememberData = $('rememberData');
+const zoneOtherHint = $('zoneOtherHint');
+const checkoutError = $('checkoutError');
+const storeNotice = $('storeNotice');
+const promoText = $('promoText');
+const promoProgress = $('promoProgress');
+const subtotalValue = $('subtotalValue');
+const totalValue = $('totalValue');
+const miniCart = $('miniCart');
+const repeatOrder = $('repeatOrder');
+const loader = $('loader');
+const timeGreeting = $('timeGreeting');
+const cartToggle = $('cartToggle');
+const lightbox = $('lightbox');
+const peopleRange = $('peopleRange');
+const daysRange = $('daysRange');
+const catalogSearch = $('catalogSearch');
+const catalogSort = $('catalogSort');
+const zoneSelect = $('zoneSelect');
+const zoneResult = $('zoneResult');
+const nightToggle = $('nightToggle');
+const productModal = $('productModal');
 const eggMeter = document.querySelector('#eggMeter span');
-const eggRain = document.getElementById('eggRain');
-const featherConfetti = document.getElementById('featherConfetti');
-const reviewsCarousel = document.getElementById('reviewsCarousel');
-let galleryIndex = 0;
+const reviewsCarousel = $('reviewsCarousel');
 let recommendedDozens = 1;
 let bonusWasUnlocked = false;
-let logoClickCount = 0;
-let lastLogoClick = 0;
 let currentTheme = 'day';
-let particleContext = null;
-let particles = [];
-let particleFrame = 0;
-let particleFrameTime = 0;
-let flyer = null;
-let nextFlyerAt = 0;
-let pointerPosition = null;
-let particleBurst = [];
 let manualTheme = null;
 let lastCartTrigger = null;
 let lastProductTrigger = null;
-let lastLightboxTrigger = null;
+let openProductId = null;
 
+// ---------- Utilidades ----------
 function formatMoney(value) {
   return currency.format(value);
 }
 
-// Escapa texto que viene de la base de datos antes de insertarlo como HTML.
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[character]);
+function icon(name, extraClass = '') {
+  return `<svg class="ico ${extraClass}" aria-hidden="true" focusable="false"><use href="#i-${name}" /></svg>`;
 }
 
-function responsivePicture(imagePath, alt, className = '') {
-  const path = imagePath || DEFAULT_PRODUCT_IMAGE;
-  const dimensions = imageDimensions[path];
-  const classAttribute = className ? ` class="${className}"` : '';
-  // Fotos subidas desde el panel (Supabase Storage): ya vienen optimizadas, sin variantes WebP.
-  if (!dimensions || !/\.jpg$/i.test(path)) {
-    return `
-    <picture class="responsive-picture">
-      <img src="${escapeHtml(path)}" alt="${escapeHtml(alt)}"${classAttribute} loading="lazy" decoding="async" />
-    </picture>`;
+function debounce(callback, wait) {
+  let timer = 0;
+  return (...args) => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => callback(...args), wait);
+  };
+}
+
+function whenIdle(callback) {
+  if ('requestIdleCallback' in window) window.requestIdleCallback(callback, { timeout: 3000 });
+  else window.setTimeout(callback, 1200);
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function readJson(storage, key) {
+  try {
+    const raw = storage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
   }
-  const webpPath = path.replace(/\.jpg$/i, '');
-  return `
-    <picture class="responsive-picture">
-      <source type="image/webp" srcset="${webpPath}-800.webp 800w, ${webpPath}-1600.webp 1600w" sizes="(max-width: 640px) 100vw, (max-width: 1023px) 50vw, 33vw" />
-      <img src="${path}" alt="${escapeHtml(alt)}"${classAttribute} loading="lazy" decoding="async" width="${dimensions.width}" height="${dimensions.height}" />
-    </picture>`;
 }
 
+function writeJson(storage, key, value) {
+  try {
+    if (value === null) storage.removeItem(key);
+    else storage.setItem(key, JSON.stringify(value));
+  } catch (error) { /* sin almacenamiento: la tienda funciona igual */ }
+}
+
+function safeStorageRead(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    return null;
+  }
+}
+
+function safeStorageWrite(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) { /* sin almacenamiento */ }
+}
+
+function announce(message) {
+  $('cartAnnouncement').textContent = message;
+}
+
+// Efectos decorativos (partículas, confeti): se cargan solo cuando hacen falta.
+let effectsModule = null;
+function loadEffects() {
+  if (!effectsModule) effectsModule = import('./effects.js');
+  return effectsModule;
+}
+
+// ---------- Avisos (con acción opcional, por ejemplo "Deshacer") ----------
+let storeNoticeTimer = 0;
+function showStoreNotice(message, { actionLabel = '', onAction = null, duration = 6000 } = {}) {
+  window.clearTimeout(storeNoticeTimer);
+  storeNotice.replaceChildren();
+  const text = document.createElement('span');
+  text.textContent = message;
+  storeNotice.append(text);
+  if (actionLabel && onAction) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'notice-action';
+    button.textContent = actionLabel;
+    button.addEventListener('click', () => {
+      storeNotice.hidden = true;
+      onAction();
+    });
+    storeNotice.append(button);
+  }
+  storeNotice.hidden = true;
+  void storeNotice.offsetWidth; // reinicia la animación de entrada
+  storeNotice.hidden = false;
+  storeNoticeTimer = window.setTimeout(() => { storeNotice.hidden = true; }, duration);
+}
+
+// ---------- Catálogo ----------
 function isSoldOut(product) {
   return product.stockStatus === 'agotado';
+}
+
+// "Quedan pocos" y "Agotado" salen del estado de stock que carga el dueño en el panel.
+function stockInfo(product) {
+  if (isSoldOut(product)) return { label: STOCK_LABELS.agotado, className: 'stock-agotado' };
+  if (product.whatsappOnly) return { label: product.category === 'mayor' ? 'Por mayor' : 'Consultá', className: 'stock-info' };
+  if (product.stockStatus === 'pocos') return { label: STOCK_LABELS.pocos, className: 'stock-pocos' };
+  return null;
 }
 
 // Convierte una fila de Supabase al formato que usa la tienda.
@@ -143,44 +199,54 @@ function productFromRow(row) {
     category: row.category,
     description: row.description || '',
     price: whatsappOnly ? 0 : Number(row.price) || 0,
-    image: row.image_url || DEFAULT_PRODUCT_IMAGE,
+    image: row.image_url || DEFAULT_IMAGE,
     badge: row.badge || '',
     stockStatus: status,
-    stock: whatsappOnly ? (row.category === 'mayor' ? 'Por mayor' : 'Consultá') : STOCK_LABELS[status],
     whatsappOnly,
     sortOrder: Number(row.sort_order) || 0,
-    qty: 1,
   };
 }
 
+function findProduct(productId) {
+  return products.find((entry) => entry.id === productId);
+}
+
 function useLocalCatalog() {
-  products = localProducts.map((product) => ({ ...product, qty: 1 }));
+  products = localProducts.map((product) => ({ ...product }));
   catalogSource = 'local';
 }
 
-// Carga el catálogo: primero la copia guardada (instantánea), después Supabase.
-async function loadCatalog() {
+// La copia guardada del catálogo se muestra al instante (sin esperar a la red).
+function showCachedCatalog() {
   const cached = backend.readCachedCatalog();
-  if (cached?.length) {
-    products = cached.map(productFromRow);
-    catalogSource = 'cache';
-    renderCatalog();
-    syncCartWithCatalog(false);
-  } else if (backend.isConfigured()) {
-    catalogGrid.innerHTML = '<p class="catalog-loading" role="status">Cargando productos…</p>';
-  }
+  if (!cached?.length) return;
+  products = cached.map(productFromRow);
+  catalogSource = 'cache';
+  renderCatalog();
+  syncCartWithCatalog(false);
+}
 
+// Después llega la versión al día desde Supabase (o el respaldo local si no responde).
+async function loadCatalog() {
+  let failed = false;
   try {
     const rows = await backend.fetchProducts();
     products = rows.map(productFromRow);
     catalogSource = 'remote';
   } catch (error) {
-    if (backend.isConfigured()) console.warn('No se pudo cargar el catálogo; se usa el respaldo:', error);
+    failed = backend.isConfigured();
     if (catalogSource !== 'cache') useLocalCatalog();
   }
   renderCatalog();
+  // Aviso simple si no se pudo actualizar: se sigue comprando con la última copia.
+  catalogStatus.classList.toggle('sr-only', !failed);
+  catalogStatus.classList.toggle('catalog-status-visible', failed);
+  catalogStatus.textContent = failed
+    ? 'No pudimos actualizar el catálogo. Te mostramos la última versión guardada; los precios se confirman por WhatsApp.'
+    : '';
   updateProductStructuredData();
   syncCartWithCatalog(catalogSource === 'remote');
+  openProductFromUrl();
 }
 
 function syncCartWithCatalog(authoritative) {
@@ -189,10 +255,11 @@ function syncCartWithCatalog(authoritative) {
   persistCart(state.cart, STORAGE_KEYS.cart);
   bonusWasUnlocked = cartSubtotal() >= CART_THRESHOLD;
   renderCart();
+  refreshAllCardControls();
   if (removed.length === 1) {
-    showStoreNotice(`Este producto ya no está disponible: ${removed[0]}. Lo sacamos de tu carrito.`);
+    showStoreNotice(`“${removed[0]}” ya no está disponible. Lo sacamos de tu pedido.`, { duration: 8000 });
   } else if (removed.length > 1) {
-    showStoreNotice(`Estos productos ya no están disponibles: ${removed.join(', ')}. Los sacamos de tu carrito.`);
+    showStoreNotice(`Estos productos ya no están disponibles y los sacamos de tu pedido: ${removed.join(', ')}.`, { duration: 9000 });
   }
 }
 
@@ -200,13 +267,12 @@ function cartSubtotal() {
   return state.cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 }
 
-let storeNoticeTimer = 0;
-function showStoreNotice(message) {
-  if (!storeNotice) return;
-  storeNotice.textContent = message;
-  storeNotice.hidden = false;
-  window.clearTimeout(storeNoticeTimer);
-  storeNoticeTimer = window.setTimeout(() => { storeNotice.hidden = true; }, 7000);
+function cartCount() {
+  return state.cart.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+function cartQuantity(productId) {
+  return state.cart.find((item) => item.id === productId)?.quantity || 0;
 }
 
 // Origen de la visita: utm_source/utm_medium o el sitio que la trajo (se guarda el primero de la sesión).
@@ -234,18 +300,22 @@ function trackEvent(name, props = {}) {
   if (typeof window.plausible === 'function') window.plausible(name, { props });
 }
 
-function updateProductStructuredData() {
-  const canonicalPath = window.location.pathname.replace(/index\.html$/i, '');
-  const canonicalUrl = new URL(canonicalPath, window.location.origin);
-  const canonicalHref = canonicalUrl.href;
-  document.getElementById('canonicalUrl').href = canonicalHref;
-  document.getElementById('openGraphUrl').content = canonicalHref;
-  const socialImage = new URL('imagenes/granja-campo.jpg', canonicalUrl).href;
-  document.getElementById('openGraphImage').content = socialImage;
-  document.getElementById('twitterImage').content = socialImage;
+function storeUrl() {
+  return new URL(window.location.pathname.replace(/index\.html$/i, ''), window.location.origin);
+}
 
-  const schemaElement = document.getElementById('businessSchema');
+function updateProductStructuredData() {
+  const canonicalUrl = storeUrl();
+  $('canonicalUrl').href = canonicalUrl.href;
+  $('openGraphUrl').content = canonicalUrl.href;
+  const socialImage = new URL('imagenes/og-la-pastoril.jpg', canonicalUrl).href;
+  $('openGraphImage').content = socialImage;
+  $('twitterImage').content = socialImage;
+
+  const schemaElement = $('businessSchema');
   const schema = JSON.parse(schemaElement.textContent);
+  schema.url = canonicalUrl.href;
+  schema.image = socialImage;
   schema.telephone = `+${getWhatsAppNumber()}`;
   schema.hasOfferCatalog = {
     '@type': 'OfferCatalog',
@@ -256,36 +326,16 @@ function updateProductStructuredData() {
         '@type': 'Offer',
         price: product.price,
         priceCurrency: 'ARS',
+        availability: isSoldOut(product) ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
         itemOffered: {
           '@type': 'Product',
           name: product.name,
           description: product.description,
-          image: new URL(product.image, document.baseURI).href,
+          image: new URL(imageUrl(product.image, 960), document.baseURI).href,
         },
       })),
   };
   schemaElement.textContent = JSON.stringify(schema);
-}
-
-function prefersReducedMotion() {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function safeStorageRead(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch (error) {
-    console.warn(`No se pudo leer la preferencia "${key}":`, error);
-    return null;
-  }
-}
-
-function safeStorageWrite(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch (error) {
-    console.warn(`No se pudo guardar la preferencia "${key}":`, error);
-  }
 }
 
 function timePeriod(date = new Date()) {
@@ -295,15 +345,11 @@ function timePeriod(date = new Date()) {
   return 'night';
 }
 
-function automaticThemeForTime(date = new Date()) {
-  return timePeriod(date);
-}
-
 function updateTimeAwareCopy(period = timePeriod()) {
   const greetings = {
     day: 'Buen día. Huevos recién puestos, del campo a tu mesa.',
     sunset: 'Buenas tardes. Todavía llegás a pedir para mañana.',
-    night: 'Buenas noches. El gallinero duerme, pedí y mañana te lo llevamos.',
+    night: 'Buenas noches. El gallinero duerme: pedí ahora y mañana te lo llevamos.',
   };
   const checkoutLabels = {
     day: 'Enviar pedido por WhatsApp',
@@ -311,261 +357,327 @@ function updateTimeAwareCopy(period = timePeriod()) {
     night: 'Pedir para mañana por WhatsApp',
   };
   if (timeGreeting) timeGreeting.textContent = greetings[period];
-  checkoutButton.textContent = checkoutLabels[period];
-  document.getElementById('whatsAppFab').setAttribute('aria-label', period === 'night' ? 'Pedir para mañana por WhatsApp' : 'Enviar pedido por WhatsApp');
+  if (!checkoutInFlight) checkoutButton.textContent = checkoutLabels[period];
+  $('whatsAppFab').setAttribute('aria-label', period === 'night' ? 'Pedir para mañana por WhatsApp' : 'Enviar pedido por WhatsApp');
 
-  const emptyTitle = document.querySelector('.empty-cart p');
-  const emptyHint = document.querySelector('.empty-cart small');
+  const emptyTitle = cartItems.querySelector('.empty-cart p');
+  const emptyHint = cartItems.querySelector('.empty-cart small');
   if (emptyTitle && emptyHint) {
     emptyTitle.textContent = period === 'night'
       ? 'Dejá tu pedido para mañana.'
       : period === 'sunset'
         ? 'Todavía llegás para mañana.'
-        : 'Elegí tus huevos para esta semana.';
-    emptyHint.textContent = period === 'day'
-      ? 'Armá el carrito y coordinamos la entrega por WhatsApp.'
-      : 'Armá el pedido y coordinamos por WhatsApp.';
+        : 'Tu pedido está vacío.';
+    emptyHint.textContent = 'Elegí tus huevos y coordinamos la entrega por WhatsApp.';
   }
 
   const subtotal = cartSubtotal();
-  const threshold = CART_THRESHOLD;
-  if (subtotal >= threshold) {
-    promoText.textContent = period === 'night'
-      ? 'Bonus desbloqueado. Mañana te preparamos 6 huevitos de codorniz.'
-      : period === 'sunset'
-        ? 'Bonus desbloqueado. Coordinamos la entrega para mañana.'
-        : 'Bonus desbloqueado. Te regalamos 6 huevitos de codorniz.';
+  if (subtotal >= CART_THRESHOLD) {
+    promoText.textContent = period === 'day'
+      ? '¡Regalo desbloqueado! Te sumamos 6 huevitos de codorniz.'
+      : '¡Regalo desbloqueado! Mañana te sumamos 6 huevitos de codorniz.';
   } else {
-    const remaining = formatMoney(threshold - subtotal);
-    promoText.textContent = period === 'night'
-      ? `Sumá ${remaining} y te lo preparamos para mañana.`
-      : period === 'sunset'
-        ? `Sumá ${remaining} y coordinamos para mañana.`
-        : `Sumá ${remaining} más y te regalamos 6 huevitos de codorniz.`;
+    promoText.textContent = `Sumá ${formatMoney(CART_THRESHOLD - subtotal)} más y te regalamos 6 huevitos de codorniz.`;
   }
 }
 
 function renderFilters() {
   filterChips.innerHTML = filterDefinitions
-    .map(
-      (item) => `
-        <button class="chip ${state.currentFilter === item.value ? 'active' : ''}" data-filter="${item.value}" type="button">
-          ${item.label}
-        </button>
-      `,
-    )
+    .map((item) => `<button class="chip ${state.currentFilter === item.value ? 'active' : ''}" data-filter="${item.value}" type="button" aria-pressed="${state.currentFilter === item.value}">${item.label}</button>`)
     .join('');
+}
 
+// Botón "Agregar" o, si ya está en el pedido, el selector de cantidad.
+function cardControlsMarkup(product) {
+  const name = escapeHtml(product.name);
+  if (isSoldOut(product)) return '<button class="add-button" type="button" disabled>Agotado</button>';
+  if (product.whatsappOnly) return `<button class="add-button" type="button" data-add-product="${escapeHtml(product.id)}">Consultar</button>`;
+  const quantity = cartQuantity(product.id);
+  if (!quantity) return `<button class="add-button" type="button" data-add-product="${escapeHtml(product.id)}" aria-label="Agregar ${name} al pedido">Agregar</button>`;
+  return `
+    <div class="qty-box" role="group" aria-label="Cantidad de ${name}">
+      <button class="minus-button" type="button" aria-label="Quitar uno">−</button>
+      <span class="product-qty" aria-live="polite">${quantity}</span>
+      <button class="plus-button" type="button" aria-label="Sumar uno"${quantity >= MAX_QUANTITY ? ' disabled' : ''}>+</button>
+    </div>`;
+}
+
+function productCardMarkup(product) {
+  const soldOut = isSoldOut(product);
+  const stock = stockInfo(product);
+  // El pack destacado ocupa dos columnas solo en el orden recomendado (ordenado por precio dejaría huecos).
+  const featured = product.id === 'pack-familiar' && catalogSort.value === 'default';
+  return `
+    <article class="product-card ${featured ? 'product-card-featured' : ''} ${soldOut ? 'is-soldout' : ''}" data-id="${escapeHtml(product.id)}">
+      <div class="product-card-inner">
+        <button class="product-open" type="button" aria-label="Ver detalle de ${escapeHtml(product.name)}${soldOut ? ' (agotado)' : ''}">
+          <span class="product-image">
+            ${pictureMarkup(product.image, '', { sizes: featured ? '(min-width: 768px) 320px, 45vw' : CARD_SIZES })}
+            ${product.badge ? `<span class="sticker">${escapeHtml(product.badge)}</span>` : ''}
+            ${stock ? `<span class="stock-badge ${stock.className}">${escapeHtml(stock.label)}</span>` : ''}
+          </span>
+        </button>
+        <div class="product-body">
+          <div class="product-head">
+            <h3>${escapeHtml(product.name)}</h3>
+            <span class="price">${product.price ? formatMoney(product.price) : 'Consultá precio'}</span>
+          </div>
+          <p class="product-description">${escapeHtml(product.description)}</p>
+          <div class="quantity-row" data-product-id="${escapeHtml(product.id)}">${cardControlsMarkup(product)}</div>
+        </div>
+      </div>
+    </article>`;
 }
 
 function renderCatalog() {
+  if (catalogSource === 'none') return; // siguen los esqueletos de carga
   const filteredProducts = getFilteredProducts(products, state.currentFilter, catalogSearch.value, catalogSort.value);
+  catalogGrid.setAttribute('aria-busy', 'false');
 
   if (!filteredProducts.length) {
-    catalogGrid.innerHTML = catalogSource === 'none'
-      ? '<p class="catalog-loading" role="status">Cargando productos…</p>'
-      : '<p class="catalog-loading">No encontramos productos con ese filtro.</p>';
+    const search = catalogSearch.value.trim();
+    catalogGrid.innerHTML = `
+      <div class="catalog-empty">
+        <svg viewBox="0 0 100 130" aria-hidden="true" focusable="false"><use href="#egg-art" /></svg>
+        <p>${search ? `No encontramos nada con “${escapeHtml(search)}”.` : 'No hay productos en esta categoría por ahora.'}</p>
+        <small>Probá con otra palabra o mirá todo el catálogo.</small>
+        <button class="secondary-button" type="button" data-clear-filters>Ver todos los productos</button>
+      </div>`;
     return;
   }
+  catalogGrid.innerHTML = filteredProducts.map(productCardMarkup).join('');
+}
 
-  catalogGrid.innerHTML = filteredProducts
-    .map((product) => {
-      const soldOut = isSoldOut(product);
-      const buttonLabel = soldOut
-        ? 'Agotado'
-        : state.justAddedProductId === product.id ? 'Agregado' : product.whatsappOnly ? 'Consultar' : 'Agregar';
-      const stockLabel = soldOut ? 'Agotado' : product.stock;
-      return `
-        <article class="product-card ${product.id === 'pack-familiar' ? 'product-card-featured' : ''} ${soldOut ? 'is-soldout' : ''}" data-id="${escapeHtml(product.id)}" tabindex="0" aria-label="Ver detalles de ${escapeHtml(product.name)}${soldOut ? ' (agotado)' : ''}">
-          <div class="product-image">
-            ${responsivePicture(product.image, product.name)}
-            ${product.badge ? `<span class="sticker">${escapeHtml(product.badge)}</span>` : ''}
-            ${stockLabel ? `<span class="stock-badge">${escapeHtml(stockLabel)}</span>` : ''}
-          </div>
-          <div class="product-body">
-            <div class="product-head">
-              <h3>${escapeHtml(product.name)}</h3>
-              <span class="price">${product.price ? formatMoney(product.price) : 'Consultá precio'}</span>
-            </div>
-            <p class="product-description">${escapeHtml(product.description)}</p>
-            <div class="quantity-row">
-              <div class="qty-box" data-product-id="${escapeHtml(product.id)}">
-                <button class="minus-button" type="button" aria-label="Restar unidad"${soldOut ? ' disabled' : ''}>−</button>
-                <span class="product-qty">${product.qty}</span>
-                <button class="plus-button" type="button" aria-label="Sumar unidad"${soldOut ? ' disabled' : ''}>+</button>
-              </div>
-              <button class="add-button" type="button" data-add-product="${escapeHtml(product.id)}"${soldOut ? ' disabled' : ''}>${buttonLabel}</button>
-            </div>
-          </div>
-        </article>
-      `;
-    })
-    .join('');
+// Actualiza solo los botones de una tarjeta (no se repinta el catálogo entero).
+function refreshCardControls(productId, justAdded = false) {
+  const product = findProduct(productId);
+  if (!product) return;
+  catalogGrid.querySelectorAll('.quantity-row').forEach((row) => {
+    if (row.dataset.productId !== productId) return;
+    row.innerHTML = cardControlsMarkup(product);
+    row.classList.toggle('is-added', justAdded);
+  });
+}
 
-  addProductCardEffects();
-  initRevealEffects();
+function refreshAllCardControls() {
+  catalogGrid.querySelectorAll('.quantity-row').forEach((row) => {
+    const product = findProduct(row.dataset.productId);
+    if (product) row.innerHTML = cardControlsMarkup(product);
+  });
+}
+
+// Búsqueda, orden y filtro se recuerdan al volver (durante la visita).
+function saveCatalogView() {
+  writeJson(sessionStorage, STORAGE_KEYS.catalogView, {
+    filter: state.currentFilter,
+    search: catalogSearch.value,
+    sort: catalogSort.value,
+  });
+}
+
+function restoreCatalogView() {
+  const view = readJson(sessionStorage, STORAGE_KEYS.catalogView);
+  if (!view) return;
+  if (filterDefinitions.some((item) => item.value === view.filter)) state.currentFilter = view.filter;
+  if (typeof view.search === 'string') catalogSearch.value = view.search.slice(0, 80);
+  if (['default', 'asc', 'desc'].includes(view.sort)) catalogSort.value = view.sort;
+}
+
+function setFilter(value) {
+  state.currentFilter = value;
+  renderFilters();
+  renderCatalog();
+  saveCatalogView();
 }
 
 function initCatalogInteractions() {
-  catalogSearch.addEventListener('input', renderCatalog);
-  catalogSort.addEventListener('change', renderCatalog);
-  filterChips.addEventListener('click', (event) => {
-    if (!(event.target instanceof Element)) return;
-    const chip = event.target.closest('.chip');
-    if (!chip) return;
-    state.currentFilter = chip.dataset.filter;
-    renderFilters();
+  const onViewChange = () => {
     renderCatalog();
+    saveCatalogView();
+  };
+  catalogSearch.addEventListener('input', debounce(onViewChange, 180));
+  catalogSort.addEventListener('change', onViewChange);
+  filterChips.addEventListener('click', (event) => {
+    const chip = event.target instanceof Element ? event.target.closest('.chip') : null;
+    if (chip) setFilter(chip.dataset.filter);
   });
 
+  // Un solo listener para todo el catálogo.
   catalogGrid.addEventListener('click', (event) => {
     if (!(event.target instanceof Element)) return;
-    const button = event.target.closest('button');
-    if (button?.matches('.minus-button, .plus-button')) {
-      updateQty(button.closest('.qty-box'), button.matches('.plus-button') ? 1 : -1);
-      return;
-    }
-    if (button?.matches('.add-button')) {
-      addProductToCart(button.dataset.addProduct);
+    if (event.target.closest('[data-clear-filters]')) {
+      catalogSearch.value = '';
+      catalogSort.value = 'default';
+      setFilter('all');
       return;
     }
     const card = event.target.closest('.product-card');
-    if (!card || event.target.closest('button, input, select, a')) return;
-    const product = products.find((entry) => entry.id === card.dataset.id);
+    if (!card || card.classList.contains('is-skeleton')) return;
+    const productId = card.dataset.id;
+    const button = event.target.closest('button');
+    if (button?.matches('.minus-button, .plus-button')) {
+      changeCartQuantity(productId, button.matches('.plus-button') ? 1 : -1);
+      return;
+    }
+    if (button?.matches('.add-button')) {
+      addProductToCart(productId, 1, card.querySelector('.product-image'));
+      return;
+    }
+    if (event.target.closest('a, input, select')) return;
+    const product = findProduct(productId);
     if (product) openProductModal(product);
   });
 
-  catalogGrid.addEventListener('keydown', (event) => {
-    if (!(event.target instanceof HTMLElement) || !event.target.matches('.product-card')) return;
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    const product = products.find((entry) => entry.id === event.target.dataset.id);
-    if (product) openProductModal(product);
+  document.addEventListener('click', (event) => {
+    const jump = event.target instanceof Element ? event.target.closest('[data-filter-jump]') : null;
+    if (!jump) return;
+    setFilter(jump.dataset.filterJump);
+    setActiveHash('#comprar');
+    $('catalogSection').scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
   });
 }
 
-function updateQty(qtyBox, delta) {
-  const productId = qtyBox.dataset.productId;
-  const product = products.find((item) => item.id === productId);
-  if (!product) return;
-
-  product.qty = Math.min(50, Math.max(1, product.qty + delta));
-  qtyBox.querySelector('.product-qty').textContent = product.qty;
+// ---------- Carrito ----------
+function contactAboutProduct(product) {
+  const greeting = { night: 'Buenas noches', sunset: 'Buenas tardes', day: 'Hola' }[timePeriod()];
+  const opening = product.category === 'mayor'
+    ? `${greeting}, La Pastoril. Quiero consultar por el pedido por mayor.`
+    : `${greeting}, La Pastoril. Quiero consultar por: ${product.name}.`;
+  trackEvent('click_whatsapp', { intent: product.category === 'mayor' ? 'wholesale' : 'inquiry' });
+  openWhatsApp(opening);
 }
 
-function addProductToCart(productId) {
-  const product = products.find((item) => item.id === productId);
+function addProductToCart(productId, quantity = 1, sourceElement = null) {
+  const product = findProduct(productId);
   if (!product) return;
   if (isSoldOut(product)) {
-    document.getElementById('cartAnnouncement').textContent = `${product.name} está agotado.`;
+    announce(`${product.name} está agotado.`);
     return;
   }
-
   if (product.whatsappOnly) {
-    const greeting = { night: 'Buenas noches', sunset: 'Buenas tardes', day: 'Hola' }[timePeriod()];
-    const opening = product.category === 'mayor'
-      ? timePeriod() === 'day'
-        ? 'Hola, La Pastoril. Quiero consultar por el pedido por mayor.'
-        : `${greeting}, La Pastoril. Quiero consultar por el pedido por mayor para mañana.`
-      : `${greeting}, La Pastoril. Quiero consultar por: ${product.name}.`;
-    trackEvent('click_whatsapp', { intent: product.category === 'mayor' ? 'wholesale' : 'inquiry' });
-    openWhatsApp(opening);
+    contactAboutProduct(product);
     return;
   }
 
-  const quantityAdded = product.qty;
-  animateEggToCart(productId);
   const existing = state.cart.find((item) => item.id === product.id);
   if (existing) {
-    existing.quantity = Math.min(50, existing.quantity + product.qty);
+    existing.quantity = Math.min(MAX_QUANTITY, existing.quantity + quantity);
   } else {
     state.cart.push({
       id: product.id,
       name: product.name,
       price: product.price,
-      quantity: product.qty,
+      quantity: Math.min(MAX_QUANTITY, quantity),
       image: product.image,
     });
   }
+  commitCart(product.id, true);
+  animateEggToCart(sourceElement);
+  announce(`Agregado: ${product.name}. Llevás ${cartCount()} en el pedido.`);
+  if (!cartDrawer.classList.contains('open')) {
+    showStoreNotice(`Agregado: ${product.name}`, { actionLabel: 'Ver pedido', onAction: () => openCart(), duration: 3200 });
+  }
+  trackEvent('add_to_cart', { product_id: product.id, quantity });
+}
 
-  product.qty = 1;
-  state.justAddedProductId = product.id;
-  document.getElementById('cartAnnouncement').textContent = `${product.name} agregado al carrito.`;
-  trackEvent('add_to_cart', { product_id: product.id, quantity: quantityAdded });
-  renderCatalog();
-  renderCart();
-  openCart();
+function changeCartQuantity(productId, delta) {
+  const item = state.cart.find((entry) => entry.id === productId);
+  if (!item) return;
+  if (item.quantity + delta <= 0) {
+    removeFromCart(productId);
+    return;
+  }
+  item.quantity = Math.min(MAX_QUANTITY, item.quantity + delta);
+  commitCart(productId);
+}
+
+// Quitar con posibilidad de deshacer.
+function removeFromCart(productId) {
+  const index = state.cart.findIndex((entry) => entry.id === productId);
+  if (index === -1) return;
+  const [removed] = state.cart.splice(index, 1);
+  commitCart(productId);
+  announce(`Quitaste ${removed.name} del pedido.`);
+  showStoreNotice(`Quitaste ${removed.name}`, {
+    actionLabel: 'Deshacer',
+    duration: 7000,
+    onAction: () => {
+      if (state.cart.some((entry) => entry.id === removed.id)) return;
+      state.cart.splice(Math.min(index, state.cart.length), 0, removed);
+      commitCart(removed.id);
+      announce(`${removed.name} volvió al pedido.`);
+    },
+  });
+}
+
+function commitCart(changedProductId, justAdded = false) {
   persistCart(state.cart, STORAGE_KEYS.cart);
-  window.setTimeout(() => {
-    if (state.justAddedProductId !== product.id) return;
-    state.justAddedProductId = null;
-    renderCatalog();
-  }, 1400);
+  renderCart();
+  if (changedProductId) refreshCardControls(changedProductId, justAdded);
+}
+
+function cartItemMarkup(item) {
+  const name = escapeHtml(item.name);
+  return `
+    <div class="cart-item" data-id="${escapeHtml(item.id)}">
+      <img class="cart-item-thumb" src="${escapeHtml(imageUrl(item.image, 160))}" alt="" width="64" height="64" loading="lazy" decoding="async" />
+      <div class="cart-item-body">
+        <h4>${name}</h4>
+        <small>${formatMoney(item.price)} c/u</small>
+        <div class="cart-item-actions">
+          <div class="qty-box" role="group" aria-label="Cantidad de ${name}">
+            <button class="minus-cart" type="button" aria-label="Quitar uno">−</button>
+            <span aria-live="polite">${item.quantity}</span>
+            <button class="plus-cart" type="button" aria-label="Sumar uno"${item.quantity >= MAX_QUANTITY ? ' disabled' : ''}>+</button>
+          </div>
+          <span class="cart-item-price">${formatMoney(item.price * item.quantity)}</span>
+        </div>
+      </div>
+      <button class="cart-remove" type="button" aria-label="Quitar ${name} del pedido">${icon('trash')}</button>
+    </div>`;
 }
 
 function renderCart() {
-  const art = state.cart;
-  cartItems.innerHTML = '';
+  const count = cartCount();
+  const subtotal = cartSubtotal();
 
-  if (!art.length) {
-    cartItems.innerHTML = '<div class="empty-cart"><span aria-hidden="true">🥚</span><p></p><small></small></div>';
-  } else {
-    art.forEach((item) => {
-      const card = document.createElement('div');
-      card.className = 'cart-item';
-      card.innerHTML = `
-        ${responsivePicture(item.image, item.name)}
-        <div>
-          <h4>${escapeHtml(item.name)}</h4>
-          <small>${item.quantity} unidad/es</small>
-          <div class="cart-item-actions">
-            <div class="qty-box">
-              <button class="minus-cart" type="button">−</button>
-              <span>${item.quantity}</span>
-              <button class="plus-cart" type="button">+</button>
-            </div>
-            <span class="cart-item-price">${formatMoney(item.price * item.quantity)}</span>
-          </div>
-        </div>
-      `;
+  cartItems.innerHTML = state.cart.length
+    ? state.cart.map(cartItemMarkup).join('')
+    : `<div class="empty-cart">
+        <svg viewBox="0 0 100 130" aria-hidden="true" focusable="false"><use href="#egg-art" /></svg>
+        <p></p><small></small>
+        <button class="secondary-button" type="button" data-close-cart>Ver productos</button>
+      </div>`;
 
-      card.querySelector('.minus-cart').addEventListener('click', () => updateCartItem(item.id, -1));
-      card.querySelector('.plus-cart').addEventListener('click', () => updateCartItem(item.id, 1));
-      cartItems.appendChild(card);
-    });
-  }
-
-  const subtotal = art.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = subtotal;
-  const threshold = CART_THRESHOLD;
-  const progress = Math.min(100, (subtotal / threshold) * 100);
-
-  promoProgress.style.width = `${progress}%`;
+  promoProgress.style.transform = `scaleX(${Math.min(1, subtotal / CART_THRESHOLD)})`;
+  $('promoMeter').hidden = !state.cart.length;
   subtotalValue.textContent = formatMoney(subtotal);
-  totalValue.textContent = formatMoney(total);
-  cartCountMini.textContent = art.reduce((acc, item) => acc + item.quantity, 0).toString();
+  totalValue.textContent = formatMoney(subtotal);
+
+  // Cantidad y total siempre a la vista: ícono de arriba y mini-carrito.
+  if (cartCountMini.textContent !== String(count)) {
+    cartCountMini.textContent = String(count);
+    cartCountMini.classList.remove('is-bump');
+    void cartCountMini.offsetWidth;
+    cartCountMini.classList.add('is-bump');
+  }
+  cartToggle.setAttribute('aria-label', count ? `Abrir pedido: ${count} ${count === 1 ? 'producto' : 'productos'}, ${formatMoney(subtotal)}` : 'Abrir pedido (vacío)');
+  cartToggle.classList.toggle('has-items', count > 0);
+  cartTotalMini.hidden = count === 0;
+  cartTotalMini.textContent = formatMoney(subtotal);
+  $('miniCartCount').textContent = `${count} ${count === 1 ? 'producto' : 'productos'}`;
+  $('miniCartTotal').textContent = formatMoney(subtotal);
+  miniCart.hidden = count === 0;
+  document.body.classList.toggle('has-cart', count > 0);
+
+  updateRepeatOrder();
   updateTimeAwareCopy();
+  if (!state.cart.length && (state.step === 2 || state.step === 3)) goToStep(1, { focus: false });
+  else updateStepUi();
+  if (state.step === 3) renderOrderReview();
 
-  if (subtotal >= threshold) {
-    document.body.classList.add('bonus-unlocked');
-    if (!bonusWasUnlocked) celebrate();
-  } else {
-    document.body.classList.remove('bonus-unlocked');
-  }
-  bonusWasUnlocked = subtotal >= threshold;
-}
-
-function updateCartItem(productId, delta) {
-  const item = state.cart.find((entry) => entry.id === productId);
-  if (!item) return;
-
-  item.quantity = Math.min(50, item.quantity + delta);
-  if (item.quantity <= 0) {
-    state.cart = state.cart.filter((entry) => entry.id !== productId);
-  }
-
-  persistCart(state.cart, STORAGE_KEYS.cart);
-  renderCart();
+  if (subtotal >= CART_THRESHOLD && !bonusWasUnlocked) loadEffects().then((effects) => effects.celebrate());
+  bonusWasUnlocked = subtotal >= CART_THRESHOLD;
 }
 
 function openCart() {
@@ -575,6 +687,7 @@ function openCart() {
   }
   // Se mide desde la primera apertura del carrito (antispam: un humano tarda más de 3 s).
   if (cartOpenedAt === null) cartOpenedAt = Date.now();
+  storeNotice.hidden = true;
   cartDrawer.classList.add('open');
   cartOverlay.classList.add('visible');
   cartOverlay.setAttribute('aria-hidden', 'false');
@@ -582,7 +695,7 @@ function openCart() {
   cartDrawer.setAttribute('aria-hidden', 'false');
   cartToggle.setAttribute('aria-expanded', 'true');
   document.body.classList.add('cart-open');
-  document.getElementById('closeCart').focus();
+  $('closeCart').focus();
 }
 
 function closeCart() {
@@ -594,7 +707,66 @@ function closeCart() {
   cartDrawer.setAttribute('inert', '');
   cartToggle.setAttribute('aria-expanded', 'false');
   document.body.classList.remove('cart-open');
-  if (lastCartTrigger instanceof HTMLElement) lastCartTrigger.focus();
+  if (state.step === 'done') finishOrderDone();
+  if (lastCartTrigger instanceof HTMLElement && lastCartTrigger.isConnected) lastCartTrigger.focus();
+}
+
+// ---------- Pasos del pedido: 1. Tu pedido · 2. Tus datos · 3. Enviar ----------
+function updateStepUi() {
+  const step = state.step;
+  cartDrawer.classList.toggle('is-done', step === 'done');
+  cartDrawer.querySelectorAll('.cart-step').forEach((section) => {
+    section.hidden = section.dataset.step !== String(step);
+  });
+  cartDrawer.querySelectorAll('.cart-steps [data-step-go]').forEach((button) => {
+    const number = Number(button.dataset.stepGo);
+    if (number === step) button.setAttribute('aria-current', 'step');
+    else button.removeAttribute('aria-current');
+    button.classList.toggle('is-done', typeof step === 'number' && number < step);
+    button.disabled = !state.cart.length && number > 1;
+  });
+  cartBack.hidden = step === 1 || step === 'done';
+  cartNext.hidden = step === 3 || step === 'done';
+  checkoutButton.hidden = step !== 3;
+  cartNext.disabled = !state.cart.length;
+  cartNext.textContent = step === 1 ? 'Continuar con mis datos' : 'Revisar y enviar';
+  $('cartTitle').textContent = step === 'done' ? 'Pedido enviado' : 'Tu pedido';
+  if (step !== 3) cartFooterHint.hidden = true;
+}
+
+function goToStep(step, { focus = true } = {}) {
+  if (step !== 1 && step !== 'done' && !state.cart.length) return false;
+  if (step === 3 && !validateCustomerData()) {
+    state.step = 2;
+    updateStepUi();
+    return false;
+  }
+  state.step = step;
+  if (step === 3) renderOrderReview();
+  updateStepUi();
+  $('cartBody').scrollTop = 0;
+  if (focus && cartDrawer.classList.contains('open')) {
+    if (step === 2 && !customerName.value) customerName.focus();
+    else $('cartTitle').focus();
+  }
+  return true;
+}
+
+function renderOrderReview() {
+  const notes = customerNotes.value.trim();
+  $('orderReview').innerHTML = `
+    <h3>Revisá tu pedido</h3>
+    <ul class="review-items">
+      ${state.cart.map((item) => `<li><span>${item.quantity} × ${escapeHtml(item.name)}</span><span>${formatMoney(item.price * item.quantity)}</span></li>`).join('')}
+    </ul>
+    <dl class="review-data">
+      <div><dt>Nombre</dt><dd>${escapeHtml(customerName.value.trim())}</dd></div>
+      <div><dt>Zona</dt><dd>${escapeHtml(customerZone.value)}</dd></div>
+      <div><dt>Día</dt><dd>${escapeHtml(deliveryDay.value || 'A coordinar')}</dd></div>
+      ${customerPhone.value.trim() ? `<div><dt>Teléfono</dt><dd>${escapeHtml(customerPhone.value.trim())}</dd></div>` : ''}
+      ${notes ? `<div><dt>Aclaraciones</dt><dd>${escapeHtml(notes)}</dd></div>` : ''}
+    </dl>
+    <button class="link-button" type="button" data-step-go="2">Cambiar mis datos</button>`;
 }
 
 function buildWhatsAppMessage(orderId) {
@@ -613,7 +785,7 @@ function buildWhatsAppMessage(orderId) {
 
 // ---------- Zonas del carrito (select agrupado) ----------
 function renderZoneOptions(zones) {
-  const selected = customerZone.value;
+  const selected = customerZone.value || customerZone.dataset.pending || '';
   const groups = new Map();
   zones.forEach((zone) => {
     const group = zone.group_name || 'Otras';
@@ -638,41 +810,68 @@ function updateZoneHint() {
 }
 
 async function loadZones() {
-  renderZoneOptions(backend.readCachedZones() || fallbackZones);
   try {
     renderZoneOptions(await backend.fetchZones());
-  } catch (error) {
-    if (backend.isConfigured()) console.warn('No se pudieron cargar las zonas:', error);
+  } catch (error) { /* quedan las zonas guardadas o las de respaldo */ }
+}
+
+// ---------- Validación en línea ----------
+const FIELD_RULES = [
+  [customerName, (field) => (field.value.trim() ? '' : 'Decinos tu nombre, así sabemos a quién llevarle el pedido.')],
+  [customerZone, (field) => (field.value ? '' : 'Elegí tu zona para coordinar la entrega.')],
+  [customerPhone, (field) => {
+    const digits = field.value.replace(/\D/g, '');
+    return field.value.trim() === '' || (digits.length >= 8 && digits.length <= 15) ? '' : 'Revisá el teléfono: con código de área, entre 8 y 15 números.';
+  }],
+];
+
+function showFieldError(field, message) {
+  const error = $(`${field.id}Error`);
+  if (message) field.setAttribute('aria-invalid', 'true');
+  else field.removeAttribute('aria-invalid');
+  if (error) {
+    error.textContent = message;
+    error.hidden = !message;
   }
 }
 
-// ---------- Validación del carrito ----------
-function setFieldError(field, invalid) {
-  if (invalid) field.setAttribute('aria-invalid', 'true');
-  else field.removeAttribute('aria-invalid');
+function validateField(field) {
+  const rule = FIELD_RULES.find(([ruleField]) => ruleField === field);
+  const message = rule ? rule[1](field) : '';
+  showFieldError(field, message);
+  return message;
 }
 
-function validateCheckout() {
-  const errors = [];
-  const phoneDigits = customerPhone.value.replace(/\D/g, '');
-  const checks = [
-    [null, !state.cart.length, 'Tu carrito está vacío.'],
-    [customerName, !customerName.value.trim(), 'Escribí tu nombre.'],
-    [customerZone, !customerZone.value, 'Elegí tu zona.'],
-    [customerPhone, customerPhone.value.trim() !== '' && (phoneDigits.length < 8 || phoneDigits.length > 15), 'Revisá el teléfono: con código de área, entre 8 y 15 números.'],
-    [customerConsent, !customerConsent.checked, 'Para enviar el pedido tenés que aceptar la política de privacidad.'],
-  ];
+function validateCustomerData() {
   let firstInvalid = null;
-  checks.forEach(([field, invalid, message]) => {
-    if (field) setFieldError(field, invalid);
-    if (!invalid) return;
-    errors.push(message);
-    if (!firstInvalid && field) firstInvalid = field;
+  FIELD_RULES.forEach(([field]) => {
+    if (validateField(field) && !firstInvalid) firstInvalid = field;
   });
-  checkoutError.textContent = errors.join(' ');
-  checkoutError.hidden = !errors.length;
   if (firstInvalid) firstInvalid.focus();
-  return errors.length === 0;
+  return !firstInvalid;
+}
+
+// Aviso discreto de lo que falta antes de enviar.
+function validateCheckout() {
+  checkoutError.hidden = true;
+  if (!state.cart.length) {
+    goToStep(1);
+    return false;
+  }
+  if (!validateCustomerData()) {
+    state.step = 2;
+    updateStepUi();
+    return false;
+  }
+  if (!customerConsent.checked) {
+    customerConsent.setAttribute('aria-invalid', 'true');
+    cartFooterHint.textContent = 'Falta un paso: tildá que aceptás la política de privacidad.';
+    cartFooterHint.hidden = false;
+    customerConsent.focus();
+    return false;
+  }
+  cartFooterHint.hidden = true;
+  return true;
 }
 
 function setCheckoutBusy(busy) {
@@ -682,6 +881,59 @@ function setCheckoutBusy(busy) {
   else updateTimeAwareCopy();
 }
 
+// ---------- Datos recordados y último pedido (solo en este dispositivo) ----------
+function restoreCustomerData() {
+  const saved = readJson(localStorage, STORAGE_KEYS.customer);
+  if (!saved) return;
+  customerName.value = String(saved.name || '').slice(0, 80);
+  customerPhone.value = String(saved.phone || '').slice(0, 30);
+  if (saved.day) deliveryDay.value = saved.day;
+  customerZone.dataset.pending = String(saved.zone || ''); // se aplica cuando cargan las zonas
+  rememberData.checked = true;
+}
+
+function saveCustomerData() {
+  writeJson(localStorage, STORAGE_KEYS.customer, rememberData.checked
+    ? { name: customerName.value.trim(), zone: customerZone.value, phone: customerPhone.value.trim(), day: deliveryDay.value }
+    : null);
+}
+
+function updateRepeatOrder() {
+  const last = readJson(localStorage, STORAGE_KEYS.lastOrder);
+  const usable = Array.isArray(last?.items) && last.items.length > 0 && !state.cart.length && state.step !== 'done';
+  repeatOrder.hidden = !usable;
+  if (!usable) return;
+  $('repeatOrderDetail').textContent = last.items.map((item) => `${item.quantity} × ${item.name}`).join(', ');
+}
+
+function repeatLastOrder() {
+  const last = readJson(localStorage, STORAGE_KEYS.lastOrder);
+  if (!Array.isArray(last?.items)) return;
+  const missing = [];
+  last.items.forEach((item) => {
+    const product = findProduct(item.id);
+    if (!product || isSoldOut(product) || product.whatsappOnly) {
+      missing.push(item.name);
+      return;
+    }
+    state.cart.push({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: Math.min(MAX_QUANTITY, Math.max(1, Number(item.quantity) || 1)),
+      image: product.image,
+    });
+  });
+  commitCart();
+  refreshAllCardControls();
+  if (missing.length) {
+    showStoreNotice(`Hoy no tenemos: ${missing.join(', ')}. Armamos el pedido con el resto.`, { duration: 8000 });
+  } else {
+    announce('Listo: cargamos tu último pedido con los precios de hoy.');
+  }
+}
+
+// ---------- Envío ----------
 // Registra el pedido en Supabase (máximo 2,5 s) y abre WhatsApp con el número de pedido.
 async function handleCheckout() {
   if (checkoutInFlight || !validateCheckout()) return;
@@ -711,31 +963,58 @@ async function handleCheckout() {
     orderId = result.id;
     backend.removePendingOrder(clientRef);
   } catch (error) {
+    // El pedido sale igual por WhatsApp con un número temporal.
     if (error.permanent) backend.removePendingOrder(clientRef);
-    console.warn('El pedido se envía con número temporal:', error.message);
   }
 
   const message = buildWhatsAppMessage(orderId);
   trackEvent('click_whatsapp', { intent: 'checkout' });
+  saveCustomerData();
+  writeJson(localStorage, STORAGE_KEYS.lastOrder, {
+    id: orderId,
+    date: Date.now(),
+    items: state.cart.map((item) => ({ id: item.id, name: item.name, quantity: item.quantity })),
+  });
+  // Al volver de WhatsApp (o si no se abrió) se ve la confirmación con el número.
+  writeJson(sessionStorage, STORAGE_KEYS.orderDone, { id: orderId, message });
 
   // El pedido ya salió: vaciamos el carrito para no mandarlo dos veces.
   state.cart = [];
   persistCart(state.cart, STORAGE_KEYS.cart);
   customerNotes.value = '';
+  customerConsent.checked = false;
+  showOrderDone();
+  refreshAllCardControls();
   goToWhatsApp(message);
 
-  // Si la persona vuelve a la tienda (botón Atrás), el carrito queda listo de nuevo.
   window.setTimeout(() => {
     checkoutInFlight = false;
     setCheckoutBusy(false);
-    renderCart();
   }, 1500);
+}
+
+function showOrderDone() {
+  const done = readJson(sessionStorage, STORAGE_KEYS.orderDone);
+  if (!done?.id) return false;
+  const temporary = String(done.id).startsWith('LP-T-');
+  $('doneOrderLabel').textContent = temporary
+    ? 'Tu pedido quedó armado. El número te lo confirmamos por WhatsApp.'
+    : 'Tu número de pedido es';
+  $('doneOrderId').textContent = temporary ? '' : done.id;
+  state.step = 'done';
+  renderCart();
+  return true;
+}
+
+function finishOrderDone() {
+  writeJson(sessionStorage, STORAGE_KEYS.orderDone, null);
+  state.step = 1;
+  renderCart();
 }
 
 // ---------- Reseñas aprobadas en "Clientes" ----------
 function starsMarkup(count) {
-  const star = '<img class="line-icon" src="imagenes/iconos/2B50.png" alt="" aria-hidden="true" width="64" height="64" decoding="async" />';
-  return `<span class="stars" aria-label="${count} ${count === 1 ? 'estrella' : 'estrellas'}">${star.repeat(count)}</span>`;
+  return `<span class="stars" role="img" aria-label="${count} ${count === 1 ? 'estrella' : 'estrellas'}">${'<svg class="ico"><use href="#i-star" /></svg>'.repeat(count)}</span>`;
 }
 
 async function loadApprovedReviews() {
@@ -755,10 +1034,7 @@ async function loadApprovedReviews() {
     document.querySelectorAll('#clientes .review-disclaimer').forEach((note, index) => {
       if (index > 0) note.hidden = true; // ya no son ilustrativas
     });
-    initRevealEffects();
-  } catch (error) {
-    console.warn('No se pudieron cargar las reseñas:', error);
-  }
+  } catch (error) { /* quedan las reseñas de respaldo */ }
 }
 
 async function loadWhatsAppNumber() {
@@ -768,132 +1044,109 @@ async function loadWhatsAppNumber() {
       setWhatsAppNumber(number);
       updateProductStructuredData();
     }
-  } catch (error) {
-    console.warn('No se pudo leer el número de WhatsApp:', error);
-  }
+  } catch (error) { /* queda el número local */ }
+}
+
+// Supabase se carga aparte (main.js) para no demorar la página. Los datos remotos
+// lo esperan hasta 6 segundos; si llega más tarde, se actualizan en ese momento.
+async function loadRemoteData() {
+  const fetchAll = () => {
+    loadCatalog();
+    loadZones();
+    loadApprovedReviews();
+    loadWhatsAppNumber();
+    // Pedidos que no se pudieron registrar en visitas anteriores.
+    window.setTimeout(() => backend.retryPendingOrders().catch(() => {}), 3000);
+  };
+  const ready = Promise.resolve(window.lpBackendReady);
+  const result = await Promise.race([ready, new Promise((resolve) => { window.setTimeout(() => resolve('timeout'), 6000); })]);
+  fetchAll();
+  if (result === 'timeout') ready.then((loaded) => { if (loaded) fetchAll(); });
 }
 
 function initCheckoutForm() {
   customerZone.addEventListener('change', () => {
     updateZoneHint();
-    setFieldError(customerZone, false);
+    validateField(customerZone);
   });
-  [customerName, customerPhone].forEach((field) => field.addEventListener('input', () => setFieldError(field, false)));
-  customerConsent.addEventListener('change', () => setFieldError(customerConsent, false));
+  [customerName, customerPhone].forEach((field) => {
+    field.addEventListener('blur', () => validateField(field));
+    field.addEventListener('input', () => {
+      if (field.hasAttribute('aria-invalid')) validateField(field);
+    });
+  });
+  customerConsent.addEventListener('change', () => {
+    customerConsent.removeAttribute('aria-invalid');
+    cartFooterHint.hidden = true;
+  });
+  rememberData.addEventListener('change', () => {
+    if (!rememberData.checked) writeJson(localStorage, STORAGE_KEYS.customer, null);
+  });
 }
 
 function initLoader() {
-  let seen = false;
-  try {
-    seen = sessionStorage.getItem('lapastoril-loader-seen') === 'true';
-  } catch (error) {
-    console.warn('No se pudo leer el estado de carga:', error);
-  }
-  if (seen) {
-    loader.classList.add('hidden');
-    return;
-  }
-
-  loader.classList.add('opening');
-  window.setTimeout(() => {
-    loader.classList.add('hidden');
+  if (!loader) return; // ya se vio en esta sesión
+  const finish = () => {
+    loader.remove();
     try {
       sessionStorage.setItem('lapastoril-loader-seen', 'true');
-    } catch (error) {
-      console.warn('No se pudo guardar el estado de carga:', error);
-    }
-  }, 1500);
+    } catch (error) { /* sin sessionStorage: se vuelve a mostrar en la próxima carga */ }
+  };
+  // La secuencia entera es CSS; cuando termina la revelación circular se saca del DOM.
+  loader.addEventListener('animationend', (event) => {
+    if (event.target === loader) finish();
+  });
+  window.setTimeout(finish, 2700);
 }
 
+// ---------- Galería: el visor se carga recién cuando se usa ----------
 function initGallery() {
-  galleryImages.forEach((image, index) => {
-    image.addEventListener('click', () => {
-      galleryIndex = index;
-      openLightbox(index);
-    });
+  const grid = $('galleryGrid');
+  let lightboxModule = null;
+  const load = () => {
+    if (!lightboxModule) lightboxModule = import('./lightbox.js');
+    return lightboxModule;
+  };
+  grid.addEventListener('pointerenter', load, { once: true, capture: true });
+  grid.addEventListener('focusin', load, { once: true });
+  grid.addEventListener('click', (event) => {
+    const trigger = event.target instanceof Element ? event.target.closest('.gallery-open') : null;
+    if (!trigger) return;
+    load().then((module) => module.openLightbox(Number(trigger.dataset.galleryIndex) || 0, trigger));
   });
-
-  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-  lightboxPrev.addEventListener('click', () => navigateGallery(-1));
-  lightboxNext.addEventListener('click', () => navigateGallery(1));
-  lightbox.addEventListener('click', (event) => {
-    if (event.target === lightbox) closeLightbox();
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (!lightbox.classList.contains('open')) return;
-    if (event.key === 'Escape') closeLightbox();
-    if (event.key === 'ArrowRight') navigateGallery(1);
-    if (event.key === 'ArrowLeft') navigateGallery(-1);
-  });
-}
-
-function openLightbox(index) {
-  const images = galleryImages;
-  if (!images.length) return;
-  lightboxImage.src = images[index].src;
-  lightboxImage.alt = images[index].alt || 'Imagen de La Pastoril';
-  lastLightboxTrigger = document.activeElement;
-  lightbox.removeAttribute('inert');
-  lightbox.classList.add('open');
-  lightbox.setAttribute('aria-hidden', 'false');
-  requestAnimationFrame(() => {
-    if (lightbox.classList.contains('open')) document.getElementById('lightboxClose').focus();
-  });
-}
-
-function closeLightbox() {
-  if (!lightbox.classList.contains('open')) return;
-  lightbox.classList.remove('open');
-  lightbox.setAttribute('aria-hidden', 'true');
-  lightbox.setAttribute('inert', '');
-  if (lastLightboxTrigger instanceof HTMLElement) lastLightboxTrigger.focus();
-}
-
-function navigateGallery(step) {
-  const images = galleryImages;
-  galleryIndex = (galleryIndex + step + images.length) % images.length;
-  lightboxImage.src = images[galleryIndex].src;
-  lightboxImage.alt = images[galleryIndex].alt || 'Imagen de La Pastoril';
 }
 
 function initAccordions() {
+  const setOpen = (item, open) => {
+    const trigger = item.querySelector('.accordion-trigger');
+    const content = item.querySelector('.accordion-content');
+    item.classList.toggle('open', open);
+    trigger.setAttribute('aria-expanded', String(open));
+    content.toggleAttribute('inert', !open);
+    const indicator = trigger.querySelector('span');
+    if (indicator) indicator.textContent = open ? '−' : '+';
+  };
   document.querySelectorAll('.accordion-item').forEach((item, index) => {
     const trigger = item.querySelector('.accordion-trigger');
     const content = item.querySelector('.accordion-content');
     if (!trigger || !content) return;
-    if (!trigger.id) trigger.id = `accordion-trigger-${index + 1}`;
-    if (!content.id) content.id = `accordion-content-${index + 1}`;
+    trigger.id = `accordion-trigger-${index + 1}`;
+    content.id = `accordion-content-${index + 1}`;
     trigger.setAttribute('aria-controls', content.id);
     content.setAttribute('role', 'region');
     content.setAttribute('aria-labelledby', trigger.id);
-    const initiallyOpen = item.classList.contains('open');
-    trigger.setAttribute('aria-expanded', String(initiallyOpen));
-    content.toggleAttribute('inert', !initiallyOpen);
-    const indicator = trigger.querySelector('span');
-    if (indicator) indicator.textContent = initiallyOpen ? '−' : '+';
-
-    trigger.addEventListener('click', () => {
-      const isOpen = item.classList.contains('open');
-      document.querySelectorAll('.accordion-item').forEach((section) => {
-        section.classList.remove('open');
-        const sectionTrigger = section.querySelector('.accordion-trigger');
-        const sectionContent = section.querySelector('.accordion-content');
-        if (sectionTrigger) {
-          sectionTrigger.setAttribute('aria-expanded', 'false');
-          const indicator = sectionTrigger.querySelector('span');
-          if (indicator) indicator.textContent = '+';
-        }
-        if (sectionContent) sectionContent.setAttribute('inert', '');
-      });
-      if (!isOpen) {
-        item.classList.add('open');
-        trigger.setAttribute('aria-expanded', 'true');
-        content.removeAttribute('inert');
-        const indicator = trigger.querySelector('span');
-        if (indicator) indicator.textContent = '−';
-      }
+    setOpen(item, item.classList.contains('open'));
+  });
+  // Un listener para todos los acordeones: abrir uno cierra los demás de su grupo.
+  document.addEventListener('click', (event) => {
+    const trigger = event.target instanceof Element ? event.target.closest('.accordion-trigger') : null;
+    if (!trigger) return;
+    const item = trigger.closest('.accordion-item');
+    const wasOpen = item.classList.contains('open');
+    [...item.parentElement.children].forEach((sibling) => {
+      if (sibling.classList.contains('accordion-item')) setOpen(sibling, false);
     });
+    if (!wasOpen) setOpen(item, true);
   });
 }
 
@@ -901,184 +1154,225 @@ function initRecommendations() {
   const updateRecommendation = () => {
     const people = Number(peopleRange.value);
     const days = Number(daysRange.value);
-    const totalEggs = people * days * 1.5;
-    recommendedDozens = Math.ceil(totalEggs / 12);
-    peopleValue.textContent = `${people} personas`;
-    daysValue.textContent = `${days} días por semana`;
-    packRecommendation.textContent = `Te conviene ${recommendedDozens} ${recommendedDozens === 1 ? 'docena' : 'docenas'} por semana.`;
+    recommendedDozens = Math.ceil((people * days * 1.5) / 12);
+    $('peopleValue').textContent = `${people} ${people === 1 ? 'persona' : 'personas'}`;
+    $('daysValue').textContent = `${days} ${days === 1 ? 'día' : 'días'} por semana`;
+    $('packRecommendation').textContent = `Te conviene ${recommendedDozens} ${recommendedDozens === 1 ? 'docena' : 'docenas'} por semana.`;
   };
-
   peopleRange.addEventListener('input', updateRecommendation);
   daysRange.addEventListener('input', updateRecommendation);
   updateRecommendation();
 
-  addRecommendedPack.addEventListener('click', () => {
-    const product = products.find((entry) => entry.id === 'docena-gallina');
-    if (!product) return;
-    product.qty = recommendedDozens;
-    addProductToCart(product.id);
+  $('addRecommendedPack').addEventListener('click', () => {
+    const product = findProduct('docena-gallina');
+    if (!product || isSoldOut(product)) {
+      showStoreNotice('La docena no está disponible ahora. Mirá las otras opciones en el catálogo.');
+      return;
+    }
+    addProductToCart(product.id, recommendedDozens);
   });
+}
 
+function contactWhatsApp() {
+  const emptyMessages = {
+    day: 'Hola, La Pastoril. Quiero consultar por los huevos disponibles.',
+    sunset: 'Buenas tardes, La Pastoril. Quiero coordinar un pedido para mañana.',
+    night: 'Buenas noches, La Pastoril. Quiero dejar un pedido para mañana.',
+  };
+  // Con productos elegidos conviene terminar el pedido (así queda registrado con número).
+  if (state.cart.length) {
+    openCart();
+    return;
+  }
+  trackEvent('click_whatsapp', { intent: 'inquiry' });
+  openWhatsApp(emptyMessages[timePeriod()]);
+}
+
+function trapFocus(event) {
+  const activeDialog = [lightbox, productModal, cartDrawer].find((dialog) => dialog.classList.contains('open'));
+  if (!activeDialog) return;
+  const focusable = focusableWithin(activeDialog);
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (!first || !last) return;
+  if (!activeDialog.contains(document.activeElement)) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  } else if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 function initCartActions() {
-  document.getElementById('closeCart').addEventListener('click', closeCart);
+  $('closeCart').addEventListener('click', closeCart);
   cartToggle.addEventListener('click', openCart);
-  checkoutButton.addEventListener('click', handleCheckout);
-  const contactWhatsApp = () => {
-    const period = timePeriod();
-    const emptyMessages = {
-      day: 'Hola, La Pastoril. Quiero consultar por los huevos disponibles.',
-      sunset: 'Buenas tardes, La Pastoril. Quiero coordinar un pedido para mañana.',
-      night: 'Buenas noches, La Pastoril. Quiero dejar un pedido para mañana.',
-    };
-    const text = state.cart.length ? buildWhatsAppMessage() : emptyMessages[period];
-    trackEvent('click_whatsapp', { intent: state.cart.length ? 'cart' : 'inquiry' });
-    openWhatsApp(text);
-  };
-  document.getElementById('whatsAppFab').addEventListener('click', contactWhatsApp);
-  document.getElementById('whatsAppDesktop').addEventListener('click', contactWhatsApp);
-
+  miniCart.addEventListener('click', openCart);
   cartOverlay.addEventListener('click', closeCart);
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      closeCart();
-      closeProductModal();
-    }
-    if (event.key !== 'Tab') return;
-    const activeDialog = [cartDrawer, productModal, lightbox]
-      .find((dialog) => dialog.classList.contains('open'));
-    if (!activeDialog) return;
-    const focusable = focusableWithin(activeDialog);
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (!first || !last) return;
-    if (!activeDialog.contains(document.activeElement)) {
-      event.preventDefault();
-      (event.shiftKey ? last : first).focus();
+  checkoutButton.addEventListener('click', handleCheckout);
+  cartNext.addEventListener('click', () => goToStep(state.step === 1 ? 2 : 3));
+  cartBack.addEventListener('click', () => goToStep(state.step === 3 ? 2 : 1));
+  repeatOrder.addEventListener('click', repeatLastOrder);
+  $('doneClose').addEventListener('click', closeCart);
+  $('doneWhatsApp').addEventListener('click', () => {
+    const done = readJson(sessionStorage, STORAGE_KEYS.orderDone);
+    if (done?.message) goToWhatsApp(done.message);
+  });
+  $('whatsAppFab').addEventListener('click', contactWhatsApp);
+  $('whatsAppDesktop').addEventListener('click', contactWhatsApp);
+
+  // Un solo listener para todo el carrito.
+  cartDrawer.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const stepButton = event.target.closest('[data-step-go]');
+    if (stepButton) {
+      goToStep(Number(stepButton.dataset.stepGo));
       return;
     }
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
+    if (event.target.closest('[data-close-cart]')) {
+      closeCart();
+      return;
     }
+    const row = event.target.closest('.cart-item');
+    if (!row) return;
+    if (event.target.closest('.cart-remove')) removeFromCart(row.dataset.id);
+    else if (event.target.closest('.plus-cart')) changeCartQuantity(row.dataset.id, 1);
+    else if (event.target.closest('.minus-cart')) changeCartQuantity(row.dataset.id, -1);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !lightbox.classList.contains('open')) {
+      if (productModal.classList.contains('open')) closeProductModal();
+      else closeCart();
+    }
+    if (event.key === 'Tab') trapFocus(event);
+  });
+
+  // Al volver de WhatsApp con el botón Atrás, se muestra la confirmación.
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted && showOrderDone()) openCart();
   });
 }
 
 function initZones() {
   zoneSelect.addEventListener('change', () => {
     const zone = zoneSelect.value;
+    if (!zone) return;
     const other = zone === 'Otro';
-    const text = other ? 'Consultanos igual, capaz llegamos' : `¡Sí! Llegamos a ${zone}, coordinamos día por WhatsApp`;
+    const text = other ? 'Consultanos igual, capaz llegamos.' : `¡Sí! Llegamos a ${zone}. Coordinamos el día por WhatsApp.`;
     const message = other
       ? '¡Hola La Pastoril! Quería consultar si llegan a mi barrio.'
       : `¡Hola La Pastoril! ¿Llegan a ${zone}? Quisiera coordinar un día de entrega.`;
-    const link = createWhatsAppUrl(message);
     trackEvent('zone_check', { zone });
-    zoneResult.innerHTML = `<p>${text}</p><a class="zone-whatsapp" href="${link}" target="_blank" rel="noopener noreferrer">Coordinar por WhatsApp</a>`;
-    zoneResult.classList.remove('visible');
-    requestAnimationFrame(() => zoneResult.classList.add('visible'));
+    zoneResult.innerHTML = `<p>${escapeHtml(text)}</p><a class="zone-whatsapp" href="${escapeHtml(createWhatsAppUrl(message))}" target="_blank" rel="noopener noreferrer">${icon('chat')} Coordinar por WhatsApp</a>`;
   });
 }
 
 function initCounterAnimations() {
-  const stats = document.querySelectorAll('[data-counter]');
+  if (!('IntersectionObserver' in window) || prefersReducedMotion()) return;
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
-      const counter = entry.target;
-      const target = Number(counter.dataset.counter);
-      let current = 0;
-      const step = target / 36;
-      const tick = () => {
-        current += step;
-        if (current >= target) {
-          counter.textContent = target;
-          return;
-        }
-        counter.textContent = Math.round(current);
-        requestAnimationFrame(tick);
+      observer.unobserve(entry.target);
+      const element = entry.target;
+      const isRating = element.hasAttribute('data-rating');
+      const target = Number(isRating ? element.dataset.rating : element.dataset.counter);
+      const start = performance.now();
+      const tick = (now) => {
+        const progress = Math.min(1, (now - start) / 800);
+        const value = target * progress;
+        element.textContent = isRating ? value.toFixed(1) : String(Math.round(value));
+        if (progress < 1) requestAnimationFrame(tick);
       };
-      tick();
-      observer.unobserve(counter);
+      requestAnimationFrame(tick);
     });
   }, { threshold: 0.35 });
-
-  stats.forEach((stat) => observer.observe(stat));
-  document.querySelectorAll('[data-rating]').forEach((rating) => {
-    const target = Number(rating.dataset.rating);
-    const ratingObserver = new IntersectionObserver((entries) => {
-      if (!entries[0].isIntersecting) return;
-      const start = performance.now();
-      const animateRating = (now) => {
-        const progress = Math.min(1, (now - start) / 900);
-        rating.textContent = (target * progress).toFixed(1);
-        if (progress < 1) requestAnimationFrame(animateRating);
-      };
-      requestAnimationFrame(animateRating);
-      ratingObserver.disconnect();
-    }, { threshold: 0.35 });
-    ratingObserver.observe(rating);
-  });
+  document.querySelectorAll('[data-counter], [data-rating]').forEach((element) => observer.observe(element));
 }
 
-function addProductCardEffects() {
-  const cards = document.querySelectorAll('.product-card');
+// ---------- Detalle de producto (con enlace directo y compartir) ----------
+function productUrl(product) {
+  const url = storeUrl();
+  url.searchParams.set('producto', product.id);
+  return url.href;
+}
 
-  cards.forEach((card) => {
-    card.addEventListener('mousemove', (event) => {
-      const rect = card.getBoundingClientRect();
-      const px = (event.clientX - rect.left) / rect.width;
-      const py = (event.clientY - rect.top) / rect.height;
-      const rotateY = (0.5 - px) * 10;
-      const rotateX = (py - 0.5) * 10;
-      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
-    });
+function setProductInUrl(productId) {
+  const url = new URL(window.location.href);
+  if (productId) url.searchParams.set('producto', productId);
+  else url.searchParams.delete('producto');
+  window.history.replaceState(null, '', url);
+}
 
-    card.addEventListener('mouseleave', () => {
-      card.style.transform = '';
-    });
-  });
+function openProductFromUrl() {
+  const productId = new URLSearchParams(window.location.search).get('producto');
+  if (!productId || productModal.classList.contains('open')) return;
+  const product = findProduct(productId);
+  if (product) {
+    if (window.location.hash && window.location.hash !== '#comprar') setActiveHash('#comprar');
+    openProductModal(product);
+  } else if (catalogSource === 'remote') {
+    setProductInUrl(null);
+    showStoreNotice('Ese producto ya no está en el catálogo. Mirá lo que tenemos hoy.');
+  }
+}
+
+async function shareLink({ title, text, url }) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text, url });
+      trackEvent('share', { method: 'native' });
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return; // la persona cerró el menú de compartir
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showStoreNotice('Link copiado. Pegalo donde quieras compartirlo.');
+  } catch (error) {
+    window.prompt('Copiá este link para compartir:', url);
+  }
+  trackEvent('share', { method: 'copy' });
 }
 
 function openProductModal(product, imageIndex = 0) {
   const gallery = [...new Set([product.image, ...products.filter((entry) => entry.category === product.category && entry.image !== product.image).map((entry) => entry.image)])].slice(0, 3);
   const currentImage = gallery[imageIndex] || product.image;
   const soldOut = isSoldOut(product);
+  const stock = stockInfo(product);
+  const inCart = cartQuantity(product.id);
+  const addLabel = soldOut ? 'Agotado por ahora' : product.whatsappOnly ? 'Consultar por WhatsApp' : inCart ? `Agregar otro (llevás ${inCart})` : 'Agregar al pedido';
   productModal.innerHTML = `
     <article class="product-detail" role="dialog" aria-modal="true" aria-labelledby="productDetailTitle">
-      <button class="product-detail-close" type="button" aria-label="Cerrar detalle">×</button>
+      <button class="product-detail-close" type="button" aria-label="Cerrar detalle">${icon('close')}</button>
       <div class="product-detail-gallery">
-        ${responsivePicture(currentImage, product.name, 'product-detail-main')}
-        <div class="product-thumbnails">${gallery.map((image, index) => `<button type="button" class="${image === currentImage ? 'active' : ''}" data-image-index="${index}" aria-label="Ver imagen ${index + 1}">${responsivePicture(image, '', '')}</button>`).join('')}</div>
+        ${pictureMarkup(currentImage, product.name, { sizes: '(min-width: 768px) 440px, 100vw', className: 'product-detail-main', eager: true })}
+        ${gallery.length > 1 ? `<div class="product-thumbnails">${gallery.map((image, index) => `<button type="button" class="${image === currentImage ? 'active' : ''}" data-image-index="${index}" aria-label="Ver foto ${index + 1}"><img src="${escapeHtml(imageUrl(image, 160))}" alt="" width="56" height="56" loading="lazy" decoding="async" /></button>`).join('')}</div>` : ''}
       </div>
       <div class="product-detail-copy">
         ${product.badge ? `<span class="section-kicker">${escapeHtml(product.badge)}</span>` : ''}
-        <h2 id="productDetailTitle">${escapeHtml(product.name)}</h2>
-        <strong class="price">${product.price ? formatMoney(product.price) : 'Consultá precio'}</strong>
-        <p>${escapeHtml(product.description)} Cada lote se recolecta con cuidado para que disfrutes un producto fresco, de origen conocido y con auténtico sabor de campo.</p>
-        <h3>Qué incluye</h3><p>${escapeHtml(product.name)}. Entrega a coordinar por WhatsApp.</p>
-        <button class="primary-button product-detail-add" type="button"${soldOut ? ' disabled' : ''}>${soldOut ? 'Agotado por ahora' : product.whatsappOnly ? 'Consultar por WhatsApp' : 'Agregar al carrito'}</button>
+        <h2 id="productDetailTitle" tabindex="-1">${escapeHtml(product.name)}</h2>
+        <p class="product-detail-price"><strong class="price">${product.price ? formatMoney(product.price) : 'Consultá precio'}</strong>${stock ? `<span class="stock-badge ${stock.className}">${escapeHtml(stock.label)}</span>` : ''}</p>
+        <p>${escapeHtml(product.description)}</p>
+        <p>Cada lote se junta a mano, de gallinas criadas a campo abierto. La entrega se coordina por WhatsApp.</p>
+        <div class="product-detail-actions">
+          <button class="primary-button product-detail-add" type="button"${soldOut ? ' disabled' : ''}>${addLabel}</button>
+          <button class="ghost-button product-detail-share" type="button" aria-label="Compartir ${escapeHtml(product.name)}">${icon('share')} Compartir</button>
+        </div>
       </div>
     </article>`;
-  lastProductTrigger = document.activeElement;
+  if (!productModal.classList.contains('open')) lastProductTrigger = document.activeElement;
+  openProductId = product.id;
+  storeNotice.hidden = true;
   productModal.removeAttribute('inert');
   productModal.classList.add('open');
   productModal.setAttribute('aria-hidden', 'false');
-  productModal.querySelector('.product-detail-close').addEventListener('click', closeProductModal);
-  productModal.onclick = (event) => {
-    if (event.target === productModal) closeProductModal();
-  };
-  productModal.querySelectorAll('[data-image-index]').forEach((button) => {
-    button.addEventListener('click', () => openProductModal(product, Number(button.dataset.imageIndex)));
-  });
-  productModal.querySelector('.product-detail-add').addEventListener('click', () => {
-    closeProductModal();
-    addProductToCart(product.id);
-  });
+  document.body.classList.add('modal-open');
+  setProductInUrl(product.id);
   requestAnimationFrame(() => {
     if (productModal.classList.contains('open')) productModal.querySelector('.product-detail-close').focus();
   });
@@ -1089,282 +1383,105 @@ function closeProductModal() {
   productModal.classList.remove('open');
   productModal.setAttribute('aria-hidden', 'true');
   productModal.setAttribute('inert', '');
-  if (lastProductTrigger instanceof HTMLElement) lastProductTrigger.focus();
+  document.body.classList.remove('modal-open');
+  openProductId = null;
+  setProductInUrl(null);
+  if (lastProductTrigger instanceof HTMLElement && lastProductTrigger.isConnected) lastProductTrigger.focus();
 }
 
-function animateEggToCart(productId) {
-  const source = catalogGrid.querySelector(`.product-card[data-id="${productId}"] .product-image`);
-  const destination = cartToggle;
-  if (!source || !destination || prefersReducedMotion()) return;
+function initProductModal() {
+  productModal.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const product = findProduct(openProductId);
+    if (event.target === productModal || event.target.closest('.product-detail-close')) {
+      closeProductModal();
+      return;
+    }
+    if (!product) return;
+    const thumbnail = event.target.closest('[data-image-index]');
+    if (thumbnail) {
+      openProductModal(product, Number(thumbnail.dataset.imageIndex));
+    } else if (event.target.closest('.product-detail-add')) {
+      const source = productModal.querySelector('.product-detail-main');
+      addProductToCart(product.id, 1, source);
+      closeProductModal();
+    } else if (event.target.closest('.product-detail-share')) {
+      shareLink({
+        title: `${product.name} · La Pastoril`,
+        text: `Mirá esto de La Pastoril: ${product.name}`,
+        url: productUrl(product),
+      });
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest('[data-share-store]')) {
+      shareLink({
+        title: 'La Pastoril – Huevos de campo',
+        text: 'Huevos de campo de gallina y codorniz en Zona Sur. Se piden por WhatsApp.',
+        url: storeUrl().href,
+      });
+    }
+  });
+}
+
+// Un huevito vuela desde la foto hasta el carrito (solo transform y opacity, 300 ms).
+function animateEggToCart(source) {
+  if (!(source instanceof Element) || prefersReducedMotion() || typeof source.animate !== 'function') return;
+  const miniCartIcon = miniCart.querySelector('.mini-cart-icon');
+  const destination = miniCartIcon.getClientRects().length ? miniCartIcon : cartToggle;
   const start = source.getBoundingClientRect();
   const end = destination.getBoundingClientRect();
+  const fromX = start.left + start.width / 2;
+  const fromY = start.top + start.height / 2;
   const egg = document.createElement('span');
   egg.className = 'flying-egg';
-  egg.textContent = '🥚';
-  egg.style.left = `${start.left + start.width / 2}px`;
-  egg.style.top = `${start.top + start.height / 2}px`;
+  egg.innerHTML = '<svg viewBox="0 0 100 130" aria-hidden="true" focusable="false"><use href="#egg-art" /></svg>';
+  egg.style.left = `${fromX}px`;
+  egg.style.top = `${fromY}px`;
   document.body.appendChild(egg);
-  requestAnimationFrame(() => {
-    egg.style.setProperty('--fly-x', `${end.left + end.width / 2 - (start.left + start.width / 2)}px`);
-    egg.style.setProperty('--fly-y', `${end.top + end.height / 2 - (start.top + start.height / 2)}px`);
-    egg.classList.add('fly');
-    egg.addEventListener('transitionend', () => egg.remove(), { once: true });
-  });
+  const deltaX = end.left + end.width / 2 - fromX;
+  const deltaY = end.top + end.height / 2 - fromY;
+  egg.animate([
+    { transform: 'translate(0, 0) scale(1.2)', opacity: 1 },
+    { transform: `translate(${deltaX * 0.5}px, ${deltaY * 0.5 - 40}px) scale(1)`, opacity: 1, offset: 0.55 },
+    { transform: `translate(${deltaX}px, ${deltaY}px) scale(.4)`, opacity: 0.2 },
+  ], { duration: 300, easing: 'cubic-bezier(.3, 0, .6, 1)' }).finished.finally(() => egg.remove());
 }
 
-function resizeFieldParticles() {
-  if (!fieldParticles) return;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
-  fieldParticles.width = Math.round(width * ratio);
-  fieldParticles.height = Math.round(height * ratio);
-  particleContext = fieldParticles.getContext('2d');
-  if (!particleContext) return;
-  particleContext.setTransform(ratio, 0, 0, ratio, 0, 0);
-  const mobile = window.matchMedia('(max-width: 640px)').matches;
-  const count = currentTheme === 'night' ? (mobile ? 14 : 34) : (mobile ? 10 : 24);
-  particles = Array.from({ length: count }, () => {
-    const layer = Math.floor(Math.random() * 3);
-    return {
-      x: Math.random() * width,
-      y: currentTheme === 'night'
-        ? height * (0.5 + Math.pow(Math.random(), 0.7) * 0.5)
-        : Math.random() * height,
-      layer,
-      phase: Math.random() * Math.PI * 2,
-      blink: Math.random() * Math.PI * 2,
-      blinkSpeed: 0.6 + Math.random() * 2.1,
-      size: [2.2, 1.45, .8][layer],
-      drift: .25 + Math.random() * .55,
-      opacity: .3 + Math.random() * .55,
-    };
-  });
-  nextFlyerAt = performance.now() + 25000 + Math.random() * 15000;
-  drawFieldParticles(performance.now());
-  startFieldParticleLoop();
-}
-
-function drawFieldFlyer(time) {
-  if (!flyer && time >= nextFlyerAt) {
-    flyer = {
-      x: -24,
-      y: window.innerHeight * (.16 + Math.random() * .3),
-      speed: 38 + Math.random() * 20,
-      phase: Math.random() * Math.PI * 2,
-    };
-  }
-  if (!flyer) return;
-  flyer.x += flyer.speed / 60;
-  flyer.y += Math.sin(time * .002 + flyer.phase) * .12;
-  if (flyer.x > window.innerWidth + 30) {
-    flyer = null;
-    nextFlyerAt = time + 25000 + Math.random() * 15000;
-    return;
-  }
-  const ctx = particleContext;
-  const flap = Math.sin(time * .018 + flyer.phase) * 4;
-  ctx.save();
-  ctx.translate(flyer.x, flyer.y);
-  ctx.strokeStyle = 'rgba(255, 253, 247, .74)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(-8, flap);
-  ctx.quadraticCurveTo(-4, -4 - flap, 0, 0);
-  ctx.quadraticCurveTo(4, -4 + flap, 8, flap);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawFieldParticles(time) {
-  if (!particleContext) return;
-  const ctx = particleContext;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const night = currentTheme === 'night';
-  const reduced = prefersReducedMotion();
-  const motionTime = reduced ? 0 : time;
-  ctx.clearRect(0, 0, width, height);
-
-  particles.forEach((particle) => {
-    let x = particle.x + Math.sin(motionTime * .00025 * particle.drift + particle.phase) * (night ? 9 : 18);
-    let y = particle.y;
-    if (night) {
-      y += Math.sin(motionTime * .00022 * particle.drift + particle.phase) * 7;
-      if (!reduced && pointerPosition) {
-        const dx = x - pointerPosition.x;
-        const dy = y - pointerPosition.y;
-        const distance = Math.hypot(dx, dy);
-        if (distance > 0 && distance < 125) {
-          const force = (1 - distance / 125) * 12;
-          x += (dx / distance) * force;
-          y += (dy / distance) * force;
-        }
-      }
-    } else if (!reduced) {
-      particle.y -= particle.drift * (particle.layer === 0 ? 1 : .6);
-      particle.x += Math.sin(time * .0003 + particle.phase) * .22;
-      if (particle.y < -5) {
-        particle.y = height + 5;
-        particle.x = Math.random() * width;
-      }
-      x = particle.x;
-      y = particle.y;
-    }
-
-    const underCopy = x < width * .68 && y < height * .68;
-    const blink = reduced ? .65 : .18 + .82 * Math.max(0, Math.sin(motionTime * .001 * particle.blinkSpeed + particle.blink));
-    const alpha = particle.opacity * blink * (night && underCopy ? .3 : 1);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.shadowBlur = night ? [12, 7, 2][particle.layer] : 2;
-    ctx.shadowColor = night ? '#F2E86D' : '#FFFDF7';
-    ctx.fillStyle = night ? '#F2E86D' : (particle.layer === 0 ? '#FFFDF7' : '#F4EBD6');
-    ctx.beginPath();
-    ctx.arc(x, y, particle.size, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  });
-
-  if (night && !reduced) {
-    const now = performance.now();
-    particleBurst = particleBurst.filter((particle) => now - particle.startedAt < 900);
-    particleBurst.forEach((particle) => {
-      const age = (now - particle.startedAt) / 1000;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, 1 - age);
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = '#F2E86D';
-      ctx.fillStyle = '#F2E86D';
-      ctx.beginPath();
-      ctx.arc(particle.x + particle.vx * age, particle.y + particle.vy * age, particle.size, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    });
-  }
-
-  if (!night && !reduced) drawFieldFlyer(time);
-}
-
-function startFieldParticleLoop() {
-  if (prefersReducedMotion() || document.hidden || particleFrame || !particleContext) return;
-  const tick = (time) => {
-    particleFrame = 0;
-    if (document.hidden) return;
-    if (time - particleFrameTime >= 1000 / 60) {
-      particleFrameTime = time;
-      drawFieldParticles(time);
-    }
-    particleFrame = window.requestAnimationFrame(tick);
-  };
-  particleFrame = window.requestAnimationFrame(tick);
-}
-
+// ---------- Tema (día, atardecer, noche) ----------
 function setFieldTheme(theme) {
   currentTheme = theme;
   document.documentElement.dataset.theme = theme;
   nightToggle.setAttribute('aria-pressed', String(theme === 'night'));
   nightToggle.setAttribute('aria-label', theme === 'night' ? 'Activar modo día' : 'Activar modo noche');
+  document.querySelector('meta[name="theme-color"]').content = theme === 'night' ? '#0a1410' : '#f4ebd6';
   updateTimeAwareCopy();
-  resizeFieldParticles();
+  document.dispatchEvent(new CustomEvent('lp:theme', { detail: theme }));
 }
 
-function initFieldParticles() {
-  window.addEventListener('resize', resizeFieldParticles);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      if (particleFrame) window.cancelAnimationFrame(particleFrame);
-      particleFrame = 0;
-    } else {
-      particleFrameTime = 0;
-      startFieldParticleLoop();
-    }
-  });
-  document.addEventListener('pointermove', (event) => {
-    pointerPosition = { x: event.clientX, y: event.clientY };
-    document.documentElement.style.setProperty('--lantern-x', `${(event.clientX / window.innerWidth) * 100}%`);
-    document.documentElement.style.setProperty('--lantern-y', `${(event.clientY / window.innerHeight) * 100}%`);
-    if (event.pointerType === 'mouse') document.body.classList.add('has-lantern');
-  }, { passive: true });
-  document.addEventListener('pointerleave', () => {
-    pointerPosition = null;
-    document.body.classList.remove('has-lantern');
-  });
-  document.addEventListener('pointerdown', (event) => {
-    pointerPosition = { x: event.clientX, y: event.clientY };
-    if (currentTheme !== 'night' || prefersReducedMotion()) return;
-    for (let index = 0; index < 8; index += 1) {
-      const angle = (Math.PI * 2 * index) / 8;
-      const speed = 18 + Math.random() * 28;
-      particleBurst.push({
-        x: event.clientX,
-        y: event.clientY,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: 1.5 + Math.random() * 1.5,
-        startedAt: performance.now(),
-      });
-    }
-    startFieldParticleLoop();
-  }, { passive: true });
+function initNightMode() {
+  const theme = restoreThemePreference(safeStorageRead, STORAGE_KEYS, timePeriod);
+  manualTheme = theme.manualTheme;
+  setFieldTheme(theme.initialTheme);
   nightToggle.addEventListener('click', () => {
     manualTheme = currentTheme === 'night' ? 'day' : 'night';
     safeStorageWrite(STORAGE_KEYS.theme, manualTheme);
     safeStorageWrite(STORAGE_KEYS.legacyNight, String(manualTheme === 'night'));
     setFieldTheme(manualTheme);
   });
-}
-
-function initNightMode() {
-  const theme = restoreThemePreference(safeStorageRead, STORAGE_KEYS, automaticThemeForTime);
-  manualTheme = theme.manualTheme;
-  setFieldTheme(theme.initialTheme);
-  initFieldParticles();
   window.setInterval(() => {
+    if (document.hidden) return;
     updateTimeAwareCopy();
-    if (!manualTheme) {
-      const automaticTheme = automaticThemeForTime();
-      if (automaticTheme !== currentTheme) setFieldTheme(automaticTheme);
-    }
+    if (!manualTheme && timePeriod() !== currentTheme) setFieldTheme(timePeriod());
   }, 60000);
 }
 
-function initEggCursor() {
-  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches || prefersReducedMotion()) return;
-  let x = 0;
-  let y = 0;
-  let targetX = 0;
-  let targetY = 0;
-  document.addEventListener('mousemove', (event) => {
-    targetX = event.clientX;
-    targetY = event.clientY;
-    eggCursor.classList.add('visible');
-  });
-  document.addEventListener('mouseleave', () => eggCursor.classList.remove('visible'));
-  const follow = () => {
-    x += (targetX - x) * 0.18;
-    y += (targetY - y) * 0.18;
-    eggCursor.style.transform = `translate3d(${x}px, ${y}px, 0)`;
-    requestAnimationFrame(follow);
-  };
-  requestAnimationFrame(follow);
-  document.addEventListener('click', (event) => {
-    const splash = document.createElement('span');
-    splash.className = 'egg-splash';
-    splash.textContent = '✦';
-    splash.style.left = `${event.clientX}px`;
-    splash.style.top = `${event.clientY}px`;
-    document.body.appendChild(splash);
-    splash.addEventListener('animationend', () => splash.remove(), { once: true });
-  });
-}
-
-function initEggMeter() {
+function initScrollMeter() {
   let scheduled = false;
   const update = () => {
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    const progress = maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) : 0;
-    eggMeter.style.transform = `scaleY(${progress})`;
+    eggMeter.style.transform = `scaleY(${maxScroll > 0 ? Math.min(1, Math.max(0, window.scrollY / maxScroll)) : 0})`;
     scheduled = false;
   };
   window.addEventListener('scroll', () => {
@@ -1376,14 +1493,15 @@ function initEggMeter() {
 }
 
 function initEasterEggs() {
-  const logo = document.querySelector('.brand');
-  logo.addEventListener('click', () => {
+  let logoClickCount = 0;
+  let lastLogoClick = 0;
+  document.querySelector('.brand').addEventListener('click', () => {
     const now = Date.now();
     logoClickCount = now - lastLogoClick > 1800 ? 1 : logoClickCount + 1;
     lastLogoClick = now;
     if (logoClickCount >= 7) {
       logoClickCount = 0;
-      launchEggRain();
+      loadEffects().then((effects) => effects.launchEggRain());
     }
   });
   const sequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
@@ -1398,105 +1516,60 @@ function initEasterEggs() {
   });
 }
 
-function launchEggRain() {
-  if (prefersReducedMotion()) return;
-  for (let index = 0; index < 36; index += 1) {
-    const egg = document.createElement('span');
-    egg.className = 'rain-egg';
-    egg.textContent = '🥚';
-    egg.style.left = `${Math.random() * 100}%`;
-    egg.style.setProperty('--duration', `${1.6 + Math.random() * 1.8}s`);
-    egg.style.setProperty('--delay', `${Math.random() * 1.3}s`);
-    eggRain.appendChild(egg);
-    const start = performance.now();
-    let velocity = 0;
-    let y = -60;
-    const fall = (now) => {
-      const elapsed = Math.min(0.05, (now - start) / 1000);
-      velocity += 900 * elapsed;
-      y += velocity * elapsed;
-      const floor = window.innerHeight - 45;
-      if (y > floor) {
-        y = floor;
-        velocity *= -0.48;
-        if (Math.abs(velocity) < 65) {
-          egg.remove();
-          return;
-        }
-      }
-      egg.style.transform = `translateY(${y}px) rotate(${Math.sin(now / 120) * 18}deg)`;
-      requestAnimationFrame(fall);
-    };
-    requestAnimationFrame(fall);
-  }
-}
-
-function celebrate() {
-  if (prefersReducedMotion()) return;
-  for (let index = 0; index < 32; index += 1) {
-    const particle = document.createElement('span');
-    particle.className = 'confetti-piece';
-    particle.textContent = index % 4 === 0 ? '🥚' : '✦';
-    particle.style.left = `${Math.random() * 100}%`;
-    particle.style.setProperty('--fall-duration', `${1.6 + Math.random() * 1.8}s`);
-    particle.style.setProperty('--fall-delay', `${Math.random() * 0.6}s`);
-    featherConfetti.appendChild(particle);
-    particle.addEventListener('animationend', () => particle.remove(), { once: true });
-  }
-}
-
+let revealObserver = null;
 function initRevealEffects() {
-  const revealItems = document.querySelectorAll('.product-card, .section-header, h2, h3, .chicken-card, .review-card, .story-card, .info-card, .tool-card, .gallery-item');
-  if (!('IntersectionObserver' in window) || prefersReducedMotion()) {
-    revealItems.forEach((item) => item.classList.add('revealed-item'));
-    return;
-  }
-  revealItems.forEach((item, index) => {
-    if (item.dataset.revealReady) return;
-    item.dataset.revealReady = 'true';
-    item.classList.add('reveal-item');
-    item.style.setProperty('--reveal-delay', `${(index % 4) * 70}ms`);
-  });
-  if (!window.revealObserver) {
-    window.revealObserver = new IntersectionObserver((entries, observer) => {
+  if (!('IntersectionObserver' in window) || prefersReducedMotion()) return;
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         entry.target.classList.add('revealed-item');
-        observer.unobserve(entry.target);
+        revealObserver.unobserve(entry.target);
       });
-    }, { threshold: 0.12 });
+    }, { threshold: 0.1 });
   }
-  revealItems.forEach((item) => window.revealObserver.observe(item));
+  document.querySelectorAll('.tab-panel.active :is(.chicken-card, .review-card, .story-card, .info-card, .tool-card, .gallery-item, .commitment-item, .timeline-item, .stat-item)').forEach((item, index) => {
+    if (item.dataset.revealReady) return;
+    item.dataset.revealReady = 'true';
+    item.classList.add('reveal-item');
+    item.style.setProperty('--reveal-delay', `${(index % 3) * 60}ms`);
+    revealObserver.observe(item);
+  });
 }
 
+// Las opiniones avanzan solas, pero solo si la sección está a la vista y nadie la está usando.
 function initReviewsCarousel() {
   if (prefersReducedMotion()) return;
-  let interval;
-  let touchStartX = 0;
-  const start = () => {
-    clearInterval(interval);
-    interval = setInterval(() => {
-      if (reviewsCarousel.matches(':hover')) return;
-      const card = reviewsCarousel.querySelector('.review-card');
-      if (!card) return;
-      const next = reviewsCarousel.scrollLeft + card.getBoundingClientRect().width + 16;
-      if (next >= reviewsCarousel.scrollWidth - reviewsCarousel.clientWidth - 8) reviewsCarousel.scrollTo({ left: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-      else reviewsCarousel.scrollTo({ left: next, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-    }, 4500);
-  };
-  reviewsCarousel.addEventListener('touchstart', (event) => { touchStartX = event.changedTouches[0].clientX; }, { passive: true });
-  reviewsCarousel.addEventListener('touchend', (event) => {
-    const distance = touchStartX - event.changedTouches[0].clientX;
-    if (Math.abs(distance) > 30) reviewsCarousel.scrollBy({ left: distance > 0 ? 250 : -250, behavior: 'smooth' });
-  }, { passive: true });
-  reviewsCarousel.addEventListener('mouseenter', () => clearInterval(interval));
-  reviewsCarousel.addEventListener('mouseleave', start);
-  start();
+  let paused = false;
+  ['pointerenter', 'focusin', 'touchstart'].forEach((type) => reviewsCarousel.addEventListener(type, () => { paused = true; }, { passive: true }));
+  ['pointerleave', 'focusout'].forEach((type) => reviewsCarousel.addEventListener(type, () => { paused = false; }));
+  window.setInterval(() => {
+    if (paused || document.hidden || !$('clientes').classList.contains('active')) return;
+    const card = reviewsCarousel.querySelector('.review-card');
+    if (!card) return;
+    const next = reviewsCarousel.scrollLeft + card.getBoundingClientRect().width + 16;
+    const atEnd = next >= reviewsCarousel.scrollWidth - reviewsCarousel.clientWidth + 8;
+    reviewsCarousel.scrollTo({ left: atEnd ? 0 : next, behavior: 'smooth' });
+  }, 5000);
+}
+
+// Al cambiar de sección: animación de entrada suave y aparición de las tarjetas.
+function onSectionChange() {
+  const panel = document.querySelector('.tab-panel.active');
+  if (panel) {
+    panel.classList.remove('is-entering');
+    void panel.offsetWidth;
+    panel.classList.add('is-entering');
+  }
+  initRevealEffects();
 }
 
 function initCareAnimations() {
-  const eggDemo = document.getElementById('eggFloatDemo');
-  const toggleFloat = () => eggDemo.classList.toggle('float');
+  const eggDemo = $('eggFloatDemo');
+  const toggleFloat = () => {
+    const floating = eggDemo.classList.toggle('float');
+    eggDemo.setAttribute('aria-pressed', String(floating));
+  };
   eggDemo.addEventListener('click', toggleFloat);
   eggDemo.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -1506,104 +1579,57 @@ function initCareAnimations() {
   });
 }
 
-function initImageLoading() {
-  document.querySelectorAll('img').forEach((image) => {
-    image.decoding = 'async';
-    const imagePath = image.getAttribute('src');
-    const dimensions = imageDimensions[imagePath];
-    if (dimensions) {
-      image.width = dimensions.width;
-      image.height = dimensions.height;
-    }
-    if (image.closest('.hero-photo')) {
-      image.loading = 'eager';
-      image.fetchPriority = 'high';
-    } else if (!image.closest('#loader')) {
-      image.loading = 'lazy';
-    }
-    if (!/\.jpe?g$/i.test(imagePath || '') || image.closest('picture')) return;
-
-    const webpPath = imagePath.replace(/\.jpg$/i, '');
-    const source = document.createElement('source');
-    source.type = 'image/webp';
-    source.srcset = `${webpPath}-800.webp 800w, ${webpPath}-1600.webp 1600w`;
-    source.sizes = '(max-width: 640px) 100vw, (max-width: 1023px) 50vw, 33vw';
-    const picture = document.createElement('picture');
-    picture.className = 'responsive-picture';
-    image.before(picture);
-    picture.append(source, image);
-  });
-}
-
-function initScrollProgress() {
-  const line = document.querySelector('.progress-line span');
-  let scheduled = false;
-  const update = () => {
-    if (line) {
-      const banner = document.querySelector('.order-banner');
-      if (banner) {
-        const rect = banner.getBoundingClientRect();
-        line.style.width = `${Math.min(100, Math.max(0, ((window.innerHeight - rect.top) / (rect.height + window.innerHeight)) * 100))}%`;
-      }
-    }
-    const max = document.documentElement.scrollHeight - window.innerHeight;
-    const progress = max > 0 ? window.scrollY / max : 0;
-    document.documentElement.style.setProperty('--page-progress', String(progress));
-    scheduled = false;
-  };
-  window.addEventListener('scroll', () => {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(update);
-  }, { passive: true });
-  update();
-}
-
 function initFooter() {
-  const year = document.getElementById('footerYear');
-  const backToTop = document.getElementById('backToTop');
-  year.textContent = String(new Date().getFullYear());
-
-  backToTop.addEventListener('click', (event) => {
+  $('footerYear').textContent = String(new Date().getFullYear());
+  $('backToTop').addEventListener('click', (event) => {
     event.preventDefault();
     setActiveHash('#comprar');
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   });
 }
 
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator) || !window.isSecureContext) return;
+  const register = () => navigator.serviceWorker.register('sw.js').catch(() => { /* la tienda funciona igual sin modo offline */ });
+  // Este código arranca después de pintar la portada: la página puede haber terminado de cargar.
+  if (document.readyState === 'complete') register();
+  else window.addEventListener('load', register, { once: true });
+}
+
 function init() {
   initNavigation(nightToggle);
   initNightMode();
+  restoreCatalogView();
+  restoreCustomerData();
   updateProductStructuredData();
   bonusWasUnlocked = cartSubtotal() >= CART_THRESHOLD;
   renderFilters();
   initCatalogInteractions();
   renderCart();
   initCheckoutForm();
-  loadCatalog();
-  loadZones();
-  loadApprovedReviews();
-  loadWhatsAppNumber();
-  // Pedidos que no se pudieron registrar en visitas anteriores.
-  window.setTimeout(() => backend.retryPendingOrders().catch(() => {}), 3000);
-  initTabs(initRevealEffects);
+  initCartActions();
+  initProductModal();
+  showCachedCatalog();
+  renderZoneOptions(backend.readCachedZones() || fallbackZones);
+  loadRemoteData();
+  initTabs(onSectionChange);
   initLoader();
   initGallery();
   initAccordions();
   initCareAnimations();
   initCooking();
   initRecommendations();
-  initCartActions();
   initZones();
   initCounterAnimations();
-  initScrollProgress();
   initFooter();
-  initEggMeter();
-  initEggCursor();
+  initScrollMeter();
   initEasterEggs();
   initReviewsCarousel();
   initRevealEffects();
-  initImageLoading();
+  registerServiceWorker();
+  if (showOrderDone()) openCart();
+  // Partículas del fondo: decorativas, se cargan cuando el navegador está libre.
+  whenIdle(() => loadEffects().then((effects) => effects.initFieldParticles()));
 }
 
 init();

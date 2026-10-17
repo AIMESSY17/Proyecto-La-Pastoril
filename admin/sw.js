@@ -3,7 +3,7 @@
 // mostrar notificaciones de pedidos nuevos mientras el panel está abierto.
 // NO guarda datos de pedidos: solo los archivos de la interfaz.
 
-const CACHE = 'lp-admin-v1'; // cambiar el número si hace falta forzar una actualización
+const CACHE = 'lp-admin-v2'; // cambiar el número si hace falta forzar una actualización
 const SHELL = [
   './',
   './index.html',
@@ -11,6 +11,10 @@ const SHELL = [
   './admin.js',
   './manifest.json',
   '../config.js',
+  '../images.js',
+  '../data/products.js',
+  '../fuentes/karla-variable.woff2',
+  '../fuentes/arbutus-slab-400.woff2',
   '../favicon.svg',
   '../imagenes/icon-192.png',
 ];

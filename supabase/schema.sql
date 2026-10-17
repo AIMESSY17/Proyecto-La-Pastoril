@@ -812,14 +812,14 @@ $$;
 -- TODO: precios de ejemplo. Ajustalos desde el panel → Productos.
 -- =====================================================================
 insert into public.products (id, name, description, category, price, image_url, badge, active, stock_status, whatsapp_only, sort_order) values
-  ('pack-familiar',   'Pack Familiar: 2 maples + 1 pack codorniz', 'La elección del día para familias que quieren variedad, sabor y buen momento.', 'pack', 22000, 'imagenes/granja-campo.jpg', 'Más pedido', true, 'disponible', false, 10),
-  ('maple-30',        'Huevos de campo – Maple 30', '30 huevos frescos del campo, ideales para familias que viven el desayuno en grande.', 'gallina', 9500, 'imagenes/huevos-maple.jpg', 'Recién puestos', true, 'pocos', false, 20),
-  ('docena-gallina',  'Huevos de campo – Docena', 'La clásica docena para empezar bien el día con huevos de campo y sabor intenso.', 'gallina', 3800, 'imagenes/huevos-gallina.jpg', 'Frescos de hoy', true, 'disponible', false, 30),
-  ('media-docena',    'Huevos de campo – Media docena', 'Perfecta para dos o para un desayuno con un toque de campo en la mesa.', 'gallina', 2000, 'imagenes/huevos-gallina.jpg', 'Edición campo', true, 'disponible', false, 40),
-  ('codorniz-24',     'Huevos de codorniz – Pack x24', 'Chiquitos, manchados y con un sabor único para picadas y desayunos de lujo.', 'codorniz', 4200, 'imagenes/codornices.jpg', 'Frescos del día', true, 'pocos', false, 50),
-  ('codorniz-12',     'Huevos de codorniz – Pack x12', 'Un pack perfecto para probar la intensidad de los huevos de codorniz.', 'codorniz', 2300, 'imagenes/pedido-listo.jpg', 'Probalo', true, 'disponible', false, 60),
-  ('degustacion',     'Pack Degustación: 6 gallina + 12 codorniz', 'Un combo ideal para probar ambos tipos de huevo y armar una mesa distinta.', 'pack', 4900, 'imagenes/maples-preparados.jpg', 'Probalo', true, 'disponible', false, 70),
-  ('mayor',           'Pedido por mayor (cajones de 12 maples)', 'Pedilo por mayor y consultá el precio de la semana por WhatsApp.', 'mayor', 0, 'imagenes/gallinas-campo.jpg', 'Consultá precio', true, 'disponible', true, 80)
+  ('pack-familiar',   'Pack Familiar: 2 maples + 1 pack codorniz', 'La elección del día para familias que quieren variedad, sabor y buen momento.', 'pack', 22000, 'imagenes/huevos-mesa-madera-960.webp', 'Más pedido', true, 'disponible', false, 10),
+  ('maple-30',        'Huevos de campo – Maple 30', '30 huevos frescos del campo, ideales para familias que viven el desayuno en grande.', 'gallina', 9500, 'imagenes/huevos-mesa-madera-960.webp', 'Recién puestos', true, 'pocos', false, 20),
+  ('docena-gallina',  'Huevos de campo – Docena', 'La clásica docena para empezar bien el día con huevos de campo y sabor intenso.', 'gallina', 3800, 'imagenes/huevos-canasta-452.webp', 'Frescos de hoy', true, 'disponible', false, 30),
+  ('media-docena',    'Huevos de campo – Media docena', 'Perfecta para dos o para un desayuno con un toque de campo en la mesa.', 'gallina', 2000, 'imagenes/huevos-canasta-452.webp', 'Edición campo', true, 'disponible', false, 40),
+  ('codorniz-24',     'Huevos de codorniz – Pack x24', 'Chiquitos, manchados y con un sabor único para picadas y desayunos de lujo.', 'codorniz', 4200, 'imagenes/granjero-gallinas-960.webp', 'Frescos del día', true, 'pocos', false, 50),
+  ('codorniz-12',     'Huevos de codorniz – Pack x12', 'Un pack perfecto para probar la intensidad de los huevos de codorniz.', 'codorniz', 2300, 'imagenes/gallinas-aire-libre-960.webp', 'Probalo', true, 'disponible', false, 60),
+  ('degustacion',     'Pack Degustación: 6 gallina + 12 codorniz', 'Un combo ideal para probar ambos tipos de huevo y armar una mesa distinta.', 'pack', 4900, 'imagenes/codorniz-puesto-960.webp', 'Probalo', true, 'disponible', false, 70),
+  ('mayor',           'Pedido por mayor (cajones de 12 maples)', 'Pedilo por mayor y consultá el precio de la semana por WhatsApp.', 'mayor', 0, 'imagenes/codorniz-packs-960.webp', 'Consultá precio', true, 'disponible', true, 80)
 on conflict (id) do nothing;
 
 

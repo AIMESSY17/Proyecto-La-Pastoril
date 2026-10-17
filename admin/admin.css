@@ -3,6 +3,9 @@
    Pensado primero para celular. Misma identidad que la tienda:
    crema, verde oliva, dorado y tierra. Contraste AA en todos los textos.
    ===================================================================== */
+@font-face { font-family: "Karla"; src: url("../fuentes/karla-variable.woff2") format("woff2"); font-weight: 400 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Arbutus Slab"; src: url("../fuentes/arbutus-slab-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+
 :root {
   --bg: #f4ebd6;
   --paper: #fffdf7;
@@ -23,8 +26,9 @@
   color-scheme: light dark;
 }
 
+/* Modo oscuro: automático según el dispositivo, o elegido con el botón de tema. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0f1712;
     --paper: #18221b;
     --ink: #eaf1e6;
@@ -37,6 +41,20 @@
     --shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
   }
 }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1712;
+  --paper: #18221b;
+  --ink: #eaf1e6;
+  --muted: #a9b8ae;
+  --olive: #8fa37a;
+  --soil: #d9b08c;
+  --danger: #ff9d8f;
+  --ok: #8fd19e;
+  --border: rgba(234, 241, 230, 0.2);
+  --shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="light"] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 
@@ -99,7 +117,7 @@ button { cursor: pointer; }
 .btn-danger { background: #a3271c; color: #fffdf7; }
 .btn-danger-ghost { background: transparent; border-color: var(--border); color: var(--danger); }
 .btn-whatsapp { background: var(--whatsapp); color: #fffdf7; }
-.btn-small { min-height: 40px; padding: 0.35rem 0.75rem; font-size: 0.92rem; }
+.btn-small { min-height: 44px; padding: 0.35rem 0.75rem; font-size: 0.92rem; }
 .btn-block { width: 100%; }
 .btn:hover:not(:disabled) { filter: brightness(1.06); }
 
@@ -109,7 +127,7 @@ button { cursor: pointer; }
   border: 1px solid var(--border); border-radius: 12px;
   background: transparent; color: inherit; text-decoration: none; font-size: 1.1rem;
 }
-.icon-btn.small { width: 40px; height: 40px; font-size: 0.85rem; }
+.icon-btn.small { width: 44px; height: 44px; font-size: 0.85rem; }
 .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .icon-btn[aria-pressed="true"], .icon-btn[data-state="granted"] { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
 
@@ -174,7 +192,7 @@ button { cursor: pointer; }
   border: 0; border-top: 3px solid transparent; background: transparent;
   color: var(--muted); font-size: 0.72rem; font-weight: 700;
 }
-.tabs button > span[aria-hidden] { font-size: 1.25rem; }
+.tabs button > span[aria-hidden] { font-size: 1.25rem; line-height: 0; }
 .tabs button[aria-selected="true"] { color: var(--ink); border-top-color: var(--gold); }
 .tab-count {
   position: absolute; top: 4px; right: calc(50% - 26px);
@@ -186,7 +204,7 @@ main { width: min(1180px, 100%); margin: 0 auto; padding: 1rem 1rem calc(var(--t
 main:focus { outline: none; }
 .section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.7rem; margin-bottom: 0.8rem; }
 .card { padding: 1rem; margin-bottom: 1rem; border-radius: var(--radius); background: var(--paper); border: 1px solid var(--border); }
-.card > summary { cursor: pointer; font-weight: 700; min-height: 32px; }
+.card > summary { cursor: pointer; font-weight: 700; min-height: 44px; align-content: center; }
 .two-cols { display: grid; gap: 0 1rem; }
 .pill { display: inline-block; padding: 0.05rem 0.55rem; border-radius: 999px; background: var(--gold); color: var(--gold-ink); font-size: 0.76rem; font-weight: 700; }
 .pill-muted { background: transparent; color: var(--muted); border: 1px solid var(--border); }
@@ -349,6 +367,36 @@ dialog.sheet { width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; bord
 .toast-error { background: #a3271c; }
 .toast.leaving { opacity: 0; transition: opacity 0.3s ease; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-10px); } }
+
+/* ---------- Íconos, buscador de pedidos y atajos ---------- */
+.sprite { position: absolute; }
+.ico { display: inline-block; flex: none; width: 1.25em; height: 1.25em; vertical-align: -0.25em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.order-zone .ico { color: var(--soil); }
+.thumb .ico { width: 1.6rem; height: 1.6rem; color: var(--muted); }
+.search-field { position: relative; display: block; margin-bottom: 0.6rem; color: var(--muted); }
+.search-field .ico { position: absolute; top: 50%; left: 0.8rem; margin-top: -0.625em; pointer-events: none; }
+.search-field input {
+  width: 100%; min-height: 48px; padding: 0.55rem 0.75rem 0.55rem 2.6rem;
+  border: 1.5px solid var(--border); border-radius: 12px; background: var(--paper); color: var(--ink);
+}
+.shortcuts-btn { display: none; }
+.shortcut-list { display: grid; gap: 0.5rem; margin: 0; }
+.shortcut-list div { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+.shortcut-list dd { margin: 0; text-align: right; }
+kbd { display: inline-grid; place-items: center; min-width: 1.8rem; min-height: 1.8rem; padding: 0 0.4rem; border: 1px solid var(--border); border-bottom-width: 3px; border-radius: 6px; background: var(--bg); font: 700 0.9rem "Karla", system-ui, sans-serif; }
+@media (hover: hover) and (pointer: fine) { .shortcuts-btn { display: inline-grid; } }
+
+/* Vista previa de precios: en celular cada producto es una tarjeta, no una fila de tabla. */
+@media (max-width: 479px) {
+  .preview-table, .preview-table tbody { display: block; }
+  .preview-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .preview-table tr { display: grid; grid-template-columns: 1fr auto auto; gap: 0.2rem 0.8rem; align-items: baseline; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+  .preview-table td { padding: 0; border: 0; }
+  .preview-table td:first-child { grid-column: 1 / -1; font-weight: 700; }
+  .topbar-actions { gap: 0.2rem; }
+  .topbar-actions a.icon-btn { display: none; }
+  .topbar-brand strong { font-size: 0.95rem; }
+}
 
 /* ---------- Tablet y escritorio ---------- */
 @media (min-width: 700px) {

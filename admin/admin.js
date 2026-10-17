@@ -7,6 +7,8 @@
 // ---------------------------------------------------------------------
 // Configuración
 // ---------------------------------------------------------------------
+import { imageUrl } from '../images.js';
+
 const config = window.LP_CONFIG || {};
 const configured = Boolean(
   window.supabase?.createClient
@@ -67,6 +69,8 @@ const state = {
 // Utilidades
 // ---------------------------------------------------------------------
 const $ = (selector, root = document) => root.querySelector(selector);
+// Ícono SVG del sprite de index.html (mismo trazo que la tienda).
+const icon = (name) => `<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-${name}" /></svg>`;
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const moneyFormat = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
 const numberFormat = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 });
@@ -445,6 +449,11 @@ function refreshOrderViews() {
   badge.hidden = newCount === 0;
 }
 
+// Busca por nombre, número de pedido, referencia temporal, teléfono o zona.
+function orderMatches(order, query) {
+  return normalizeText([order.customer_name, order.id, order.client_ref, order.phone, order.zone].filter(Boolean).join(' ')).includes(query);
+}
+
 function renderOrders() {
   const all = [...state.orders.values()];
   $$('[data-count]').forEach((span) => {
@@ -454,10 +463,13 @@ function renderOrders() {
   $$('#orderFilters .chip').forEach((chip) => chip.setAttribute('aria-pressed', String(chip.dataset.filter === state.orderFilter)));
   $('#orderFilterHint').textContent = FILTER_HINTS[state.orderFilter];
 
-  const list = sortByProximity(filterOrders(all, state.orderFilter));
+  const query = normalizeText($('#orderSearch').value);
+  const matches = query ? all.filter((order) => orderMatches(order, query)) : filterOrders(all, state.orderFilter);
+  if (query) $('#orderFilterHint').textContent = `${matches.length} ${matches.length === 1 ? 'resultado' : 'resultados'} en todos los pedidos.`;
+  const list = sortByProximity(matches);
   $('#orderList').innerHTML = list.length
     ? list.map(orderCard).join('')
-    : '<p class="empty">No hay pedidos en esta lista. 🐔</p>';
+    : `<p class="empty">${query ? 'No encontramos pedidos con esa búsqueda.' : 'No hay pedidos en esta lista.'}</p>`;
 }
 
 function orderCard(order) {
@@ -465,13 +477,13 @@ function orderCard(order) {
   const stale = isStale(order);
   const items = Array.isArray(order.items) ? order.items : [];
   const actions = [];
-  if (order.status === 'nuevo') actions.push(`<button class="btn btn-primary" data-action="confirmado" data-id="${esc(order.id)}">✅ Confirmar</button>`);
-  if (order.status === 'nuevo' || order.status === 'confirmado') actions.push(`<button class="btn btn-secondary" data-action="entregado" data-id="${esc(order.id)}">📦 Entregado</button>`);
-  if (order.status === 'nuevo' || order.status === 'confirmado') actions.push(`<button class="btn btn-ghost" data-action="cancelado" data-id="${esc(order.id)}">✖ Cancelar</button>`);
-  if (order.status === 'cancelado') actions.push(`<button class="btn btn-ghost" data-action="nuevo" data-id="${esc(order.id)}">↩️ Volver a nuevo</button>`);
-  actions.push(`<button class="btn btn-whatsapp" data-action="reply" data-id="${esc(order.id)}">💬 Responder por WhatsApp</button>`);
+  if (order.status === 'nuevo') actions.push(`<button class="btn btn-primary" data-action="confirmado" data-id="${esc(order.id)}">${icon('check')} Confirmar</button>`);
+  if (order.status === 'nuevo' || order.status === 'confirmado') actions.push(`<button class="btn btn-secondary" data-action="entregado" data-id="${esc(order.id)}">${icon('box')} Entregado</button>`);
+  if (order.status === 'nuevo' || order.status === 'confirmado') actions.push(`<button class="btn btn-ghost" data-action="cancelado" data-id="${esc(order.id)}">${icon('close')} Cancelar</button>`);
+  if (order.status === 'cancelado') actions.push(`<button class="btn btn-ghost" data-action="nuevo" data-id="${esc(order.id)}">${icon('undo')} Volver a nuevo</button>`);
+  actions.push(`<button class="btn btn-whatsapp" data-action="reply" data-id="${esc(order.id)}">${icon('chat')} Responder por WhatsApp</button>`);
   if (order.status !== 'cancelado' && !order.customer_confirmed_at) {
-    actions.push(`<button class="btn btn-ghost" data-action="ask-confirm" data-id="${esc(order.id)}">🔗 Pedir confirmación de entrega</button>`);
+    actions.push(`<button class="btn btn-ghost" data-action="ask-confirm" data-id="${esc(order.id)}">${icon('link')} Pedir confirmación de entrega</button>`);
   }
 
   return `
@@ -482,7 +494,7 @@ function orderCard(order) {
         <time datetime="${esc(order.created_at)}">${esc(formatWhen(order.created_at))}</time>
       </header>
       <h3 class="order-name">${esc(order.customer_name)}</h3>
-      <p class="order-zone">📍 ${esc(order.zone || 'Sin zona')}${distance !== null ? ` · <strong>${numberFormat.format(distance)} km</strong> de la granja` : ''}</p>
+      <p class="order-zone">${icon('pin')} ${esc(order.zone || 'Sin zona')}${distance !== null ? ` · <strong>${numberFormat.format(distance)} km</strong> de la granja` : ''}</p>
       <ul class="order-items">
         ${items.map((item) => `<li><span>${esc(item.cantidad)} × ${esc(item.nombre)}</span><span>${money(item.precio * item.cantidad)}</span></li>`).join('')}
       </ul>
@@ -494,7 +506,7 @@ function orderCard(order) {
         ${order.source ? `<div><dt>Origen</dt><dd>${esc(order.source)}</dd></div>` : ''}
         ${order.client_ref ? `<div><dt>Ref. temporal</dt><dd>${esc(order.client_ref)}</dd></div>` : ''}
         ${order.rating ? `<div><dt>Calificación</dt><dd>${'★'.repeat(order.rating)}${'☆'.repeat(5 - order.rating)}</dd></div>` : ''}
-        ${order.customer_confirmed_at ? '<div><dt>Cliente</dt><dd>Confirmó la recepción ✔</dd></div>' : ''}
+        ${order.customer_confirmed_at ? '<div><dt>Cliente</dt><dd>Confirmó la recepción</dd></div>' : ''}
       </dl>
       ${stale ? '<p class="stale-note">Más de 48 h sin respuesta: no cuenta como venta. Confirmalo o cancelalo.</p>' : ''}
       <div class="order-actions">${actions.join('')}</div>
@@ -541,7 +553,18 @@ function initOrders() {
     const chip = event.target.closest('.chip');
     if (!chip) return;
     state.orderFilter = chip.dataset.filter;
+    writePref('lp-admin-order-filter', state.orderFilter);
+    $('#orderSearch').value = '';
     renderOrders();
+  });
+
+  // Filtro recordado y buscador (con una pequeña espera para no repintar en cada tecla).
+  const savedFilter = readPref('lp-admin-order-filter');
+  if (savedFilter && FILTER_HINTS[savedFilter]) state.orderFilter = savedFilter;
+  let searchTimer = 0;
+  $('#orderSearch').addEventListener('input', () => {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(renderOrders, 180);
   });
 
   $('#orderList').addEventListener('click', async (event) => {
@@ -564,6 +587,14 @@ function initOrders() {
         message: `El pedido de ${order.customer_name} deja de contar como venta. Podés volverlo a "nuevo" después.`,
         confirmLabel: 'Sí, cancelar',
         danger: true,
+      });
+      if (answer !== 'confirm') return;
+    }
+    if (action === 'entregado') {
+      const answer = await confirmDialog({
+        title: `¿Marcar ${order.id} como entregado?`,
+        message: `El pedido de ${order.customer_name} pasa a "entregado" y cuenta como venta. Después no se puede volver atrás desde el panel.`,
+        confirmLabel: 'Sí, entregado',
       });
       if (answer !== 'confirm') return;
     }
@@ -662,7 +693,7 @@ function beep() {
 function updateSoundButton() {
   const button = $('#soundToggle');
   button.setAttribute('aria-pressed', String(state.soundOn));
-  button.querySelector('[aria-hidden]').textContent = state.soundOn ? '🔊' : '🔇';
+  button.querySelector('span[aria-hidden]').innerHTML = icon(state.soundOn ? 'sound' : 'mute');
   button.querySelector('.sr-only').textContent = state.soundOn ? 'Desactivar sonido de pedidos nuevos' : 'Activar sonido de pedidos nuevos';
   button.title = state.soundOn ? 'Sonido activado' : 'Sonido desactivado';
 }
@@ -678,7 +709,7 @@ function updateNotifyButton() {
     unsupported: 'Este navegador no admite notificaciones',
   }[permission];
   button.querySelector('.sr-only').textContent = button.title;
-  button.querySelector('[aria-hidden]').textContent = permission === 'granted' ? '📣' : '🔔';
+  button.querySelector('span[aria-hidden]').innerHTML = icon(permission === 'granted' ? 'bell-on' : 'bell');
 }
 
 function initAlerts() {
@@ -759,7 +790,7 @@ async function showSystemNotification(order) {
 function notifyNewOrder(order) {
   if (document.hidden || state.activeTab !== 'pedidos') state.unseen += 1;
   updateTitle();
-  toast(`🥚 Nuevo pedido ${order.id} · ${order.customer_name} · ${money(order.total)}`, 'success', 8000);
+  toast(`Nuevo pedido ${order.id} · ${order.customer_name} · ${money(order.total)}`, 'success', 8000);
   if (state.soundOn) {
     ensureAudio();
     beep();
@@ -947,7 +978,12 @@ function exportCsv() {
 }
 
 function initStats() {
-  $('#statsRange').addEventListener('change', renderStats);
+  const savedRange = readPref('lp-admin-stats-range');
+  if (['7', '30', '90'].includes(savedRange)) $('#statsRange').value = savedRange;
+  $('#statsRange').addEventListener('change', () => {
+    writePref('lp-admin-stats-range', $('#statsRange').value);
+    renderStats();
+  });
   $('#exportCsv').addEventListener('click', exportCsv);
 }
 
@@ -982,8 +1018,8 @@ function renderReviews() {
   const approved = state.reviews.filter((review) => review.status === 'aprobada');
   $('#pendingReviews').innerHTML = pending.length
     ? pending.map((review) => reviewCard(review, `
-        <button class="btn btn-primary" data-review="${review.id}" data-status="aprobada">✅ Aprobar</button>
-        <button class="btn btn-ghost" data-review="${review.id}" data-status="rechazada">✖ Rechazar</button>`)).join('')
+        <button class="btn btn-primary" data-review="${review.id}" data-status="aprobada">${icon('check')} Aprobar</button>
+        <button class="btn btn-ghost" data-review="${review.id}" data-status="rechazada">${icon('close')} Rechazar</button>`)).join('')
     : '<p class="empty">No hay reseñas pendientes.</p>';
   $('#approvedReviews').innerHTML = approved.length
     ? approved.map((review) => reviewCard(review, `<button class="btn btn-ghost" data-review="${review.id}" data-status="rechazada">Quitar de la web</button>`)).join('')
@@ -997,6 +1033,15 @@ function initReviews() {
   $('#tab-resenas').addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-review]');
     if (!button) return;
+    if (button.dataset.status === 'rechazada') {
+      const answer = await confirmDialog({
+        title: '¿Sacar esta reseña?',
+        message: 'La reseña no se va a mostrar en la tienda. No se puede volver a publicar desde el panel.',
+        confirmLabel: 'Sí, sacarla',
+        danger: true,
+      });
+      if (answer !== 'confirm') return;
+    }
     setBusy(button, true, '…');
     const { error } = await sb.from('reviews').update({ status: button.dataset.status }).eq('id', Number(button.dataset.review));
     setBusy(button, false);
@@ -1023,7 +1068,7 @@ function bucketPath(url) {
 // Las fotos locales de la tienda (imagenes/…) se resuelven desde la raíz del sitio.
 function imageSrc(url) {
   if (!url) return '';
-  return /^https?:\/\//i.test(url) ? url : new URL(url, SITE_URL).href;
+  return /^https?:\/\//i.test(url) ? url : new URL(imageUrl(url, 160), SITE_URL).href;
 }
 
 async function ensureProducts() {
@@ -1070,12 +1115,12 @@ function renderProducts() {
   const reorderDisabled = isFiltered();
   $('#reorderHint').textContent = reorderDisabled
     ? 'Para reordenar, quitá la búsqueda y los filtros.'
-    : 'Para cambiar el orden de la tienda, arrastrá ⠿ o usá las flechas ▲▼.';
+    : 'Para cambiar el orden de la tienda, arrastrá desde los puntitos o usá las flechas ▲▼.';
 
   $('#productList').innerHTML = list.length ? list.map((product, index) => `
     <li class="product-row${product.active ? '' : ' is-hidden'}${product.stock_status === 'agotado' ? ' is-soldout' : ''}" data-id="${esc(product.id)}">
-      <button class="drag-handle" type="button" aria-label="Arrastrar para reordenar ${esc(product.name)}" ${reorderDisabled ? 'disabled' : ''}>⠿</button>
-      <div class="thumb">${product.image_url ? `<img src="${esc(imageSrc(product.image_url))}" alt="" loading="lazy" />` : '<span aria-hidden="true">🥚</span>'}</div>
+      <button class="drag-handle" type="button" aria-label="Arrastrar para reordenar ${esc(product.name)}" ${reorderDisabled ? 'disabled' : ''}>${icon('grip')}</button>
+      <div class="thumb">${product.image_url ? `<img src="${esc(imageSrc(product.image_url))}" alt="" loading="lazy" />` : icon('egg')}</div>
       <div class="cell-name">
         <strong>${esc(product.name)}</strong>
         ${product.badge ? `<span class="pill">${esc(product.badge)}</span>` : ''}
@@ -1258,8 +1303,23 @@ async function purgeOldTrash() {
 }
 
 function initProducts() {
+  try {
+    const saved = JSON.parse(readPref('lp-admin-product-filters') || '{}');
+    $('#productSearch').value = String(saved.query || '');
+    $('#productCategoryFilter').value = saved.category || '';
+    $('#productStatusFilter').value = saved.status || '';
+  } catch (error) { /* preferencia dañada: se ignora */ }
+  let productFilterTimer = 0;
   ['#productSearch', '#productCategoryFilter', '#productStatusFilter'].forEach((selector) => {
-    $(selector).addEventListener('input', renderProducts);
+    $(selector).addEventListener('input', () => {
+      writePref('lp-admin-product-filters', JSON.stringify({
+        query: $('#productSearch').value,
+        category: $('#productCategoryFilter').value,
+        status: $('#productStatusFilter').value,
+      }));
+      window.clearTimeout(productFilterTimer);
+      productFilterTimer = window.setTimeout(renderProducts, 150);
+    });
   });
   $('#addProduct').addEventListener('click', () => openProductForm(null));
   $('#openPrices').addEventListener('click', openPriceDialog);
@@ -1913,7 +1973,74 @@ function registerServiceWorker() {
 // ---------------------------------------------------------------------
 // Inicio
 // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
+// Tema (automático, claro u oscuro) y atajos de teclado
+// ---------------------------------------------------------------------
+const THEMES = ['auto', 'dark', 'light'];
+const THEME_LABELS = { auto: 'Tema automático (según el dispositivo)', dark: 'Tema oscuro', light: 'Tema claro' };
+
+function applyTheme(theme) {
+  if (theme === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
+  const button = $('#themeToggle');
+  button.querySelector('span[aria-hidden]').innerHTML = icon({ auto: 'theme-auto', dark: 'moon', light: 'sun' }[theme]);
+  button.querySelector('.sr-only').textContent = `${THEME_LABELS[theme]}. Tocá para cambiar.`;
+  button.title = THEME_LABELS[theme];
+}
+
+function currentThemeChoice() {
+  const saved = readPref('lp-admin-theme');
+  return THEMES.includes(saved) ? saved : 'auto';
+}
+
+function cycleTheme() {
+  const next = THEMES[(THEMES.indexOf(currentThemeChoice()) + 1) % THEMES.length];
+  writePref('lp-admin-theme', next);
+  applyTheme(next);
+  toast(THEME_LABELS[next], 'info', 1800);
+}
+
+function initShortcuts() {
+  const tabs = ['pedidos', 'estadisticas', 'resenas', 'productos', 'ajustes'];
+  const dialog = $('#shortcutsDialog');
+  $('#shortcutsButton').addEventListener('click', () => dialog.showModal());
+  document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if ($('#panelView').hidden || document.querySelector('dialog[open]')) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && (target.isContentEditable || /^(input|textarea|select)$/i.test(target.tagName))) {
+      if (event.key === 'Escape') target.blur();
+      return;
+    }
+    const key = event.key.toLowerCase();
+    if (/^[1-5]$/.test(key)) {
+      showTab(tabs[Number(key) - 1]);
+    } else if (key === '/') {
+      event.preventDefault();
+      if (state.activeTab === 'productos') {
+        $('#productSearch').focus();
+      } else {
+        showTab('pedidos');
+        $('#orderSearch').focus();
+      }
+    } else if (key === 'n') {
+      showTab('productos');
+      ensureProducts().then(() => openProductForm(null));
+    } else if (key === 'r') {
+      showTab('pedidos');
+      openTodayRoute();
+    } else if (key === 't') {
+      cycleTheme();
+    } else if (key === '?') {
+      dialog.showModal();
+    }
+  });
+}
+
 async function boot() {
+  applyTheme(currentThemeChoice());
+  $('#themeToggle').addEventListener('click', cycleTheme);
+  initShortcuts();
   registerServiceWorker();
   if (!sb) {
     showLogin('Falta configurar Supabase: completá SUPABASE_URL y SUPABASE_ANON_KEY en config.js (ver README).');

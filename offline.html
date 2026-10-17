@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4ebd6" />
+    <meta name="robots" content="noindex" />
+    <title>Sin conexión · La Pastoril</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <style>
+      body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem; background: #f4ebd6; color: #3e4a30; font-family: "Karla", system-ui, sans-serif; line-height: 1.5; text-align: center; }
+      main { display: grid; gap: 1rem; justify-items: center; max-width: 420px; }
+      svg { width: 84px; height: auto; }
+      h1 { margin: 0; font-family: "Arbutus Slab", Georgia, serif; font-size: 1.75rem; font-weight: 400; line-height: 1.15; }
+      p { margin: 0; }
+      .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: .7rem 1.4rem; border: 0; border-radius: 4px; background: #e0a526; color: #2b2000; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+      .link { color: #7a4b2a; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg viewBox="0 0 100 130" aria-hidden="true"><path d="M50 4C26 4 8 48 8 78c0 28 19 48 42 48s42-20 42-48C92 48 74 4 50 4Z" fill="#fffdf7" stroke="#7a4b2a" stroke-width="2.5" /><path d="M37 92q13-10 26 0" fill="none" stroke="#7a4b2a" stroke-width="3" stroke-linecap="round" /><circle cx="38" cy="66" r="3.5" fill="#3e4a30" /><circle cx="62" cy="66" r="3.5" fill="#3e4a30" /></svg>
+      <h1>Te quedaste sin conexión</h1>
+      <p>No pudimos cargar la tienda. Revisá el wifi o los datos del celular y probá de nuevo.</p>
+      <button class="btn" type="button" id="retry">Reintentar</button>
+      <p>Si es urgente, escribinos por WhatsApp al <a class="link" href="https://wa.me/5491176254150">+54 9 11 7625-4150</a>.</p>
+    </main>
+    <script>
+      document.getElementById('retry').addEventListener('click', function () { location.reload(); });
+    </script>
+  </body>
+</html>

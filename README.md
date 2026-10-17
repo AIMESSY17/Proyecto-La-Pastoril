@@ -83,7 +83,13 @@ window.LP_CONFIG = {
 2. Conectá el repositorio de GitHub, o elegí **Upload assets** y subí la carpeta.
 3. No pongas comando de build. El directorio de salida es la raíz (`/`).
 
-En ambos casos el sitio tiene que servirse por **https** (lo hacen solos). No funciona abriendo `index.html` con doble clic.
+**Opción C · Vercel**
+
+1. Entrá a <https://vercel.com>, **Add New… → Project** y conectá el repositorio de GitHub.
+2. Sin framework ni comando de build; el directorio de salida es la raíz.
+3. `vercel.json` ya trae la configuración de caché y `.vercelignore` deja afuera las fotos originales.
+
+En todos los casos el sitio tiene que servirse por **https** (lo hacen solos). No funciona abriendo `index.html` con doble clic.
 
 ### 7. Probar un pedido de punta a punta
 
@@ -244,7 +250,12 @@ Para ver antes qué se va a borrar: `select id, created_at, customer_name, phone
 |---|---|
 | `index.html`, `styles.css`, `app.js` | La tienda |
 | `store-backend.js` | Conexión de la tienda con Supabase (productos, zonas, reseñas, pedidos y reintentos) |
-| `cart.js`, `catalog.js`, `whatsapp.js`, `nav.js`, `theme.js`, `cooking.js`, `easter-eggs.js` | Módulos de la tienda |
+| `main.js` | Arranque: pinta la portada, carga Supabase una sola vez y después `app.js` |
+| `cart.js`, `catalog.js`, `whatsapp.js`, `nav.js`, `theme.js`, `cooking.js`, `images.js` | Módulos de la tienda |
+| `effects.js`, `lightbox.js`, `easter-eggs.js` | Módulos que se cargan solo cuando hacen falta (efectos, visor de fotos, minijuego) |
+| `sw.js`, `offline.html`, `manifest.webmanifest` | Service worker de la tienda, página sin conexión y datos para instalarla |
+| `vercel.json`, `.vercelignore` | Caché, redirecciones de fotos viejas y archivos que no se publican (Vercel) |
+| `fuentes/`, `imagenes/` | Tipografías propias y fotos optimizadas (WebP + AVIF) |
 | `data/products.js` | **Catálogo y zonas de respaldo**: se usan solo si Supabase no responde |
 | `config.js` | URL y clave pública de Supabase |
 | `privacidad.html` | Política de privacidad |
@@ -260,7 +271,19 @@ Para ver antes qué se va a borrar: `select id, created_at, customer_name, phone
 
 ### Imágenes de la tienda
 
-Las fotos de productos se suben desde el panel. Las imágenes fijas del sitio (portada, galería) están en `imagenes/`: cada JPG tiene dos versiones WebP con sufijos `-800.webp` y `-1600.webp`, y sus medidas reales se anotan en `imageDimensions` dentro de `data/products.js`.
+Las fotos de productos se suben desde el panel. Las imágenes fijas del sitio (portada, galería) están en `imagenes/` con nombres simples según lo que muestran (`huevos-paja`, `codorniz-puesto`, `gallinas-aire-libre`…). Cada foto existe en **WebP y AVIF** y en hasta tres anchos (480, 960 y 1600 px): `imagenes/<nombre>-<ancho>.webp` / `.avif`. Ninguna pesa más de 200 KB (celular) ni 400 KB (escritorio).
+
+- La lista de fotos y sus medidas está en `images` dentro de `data/products.js`; `images.js` arma el `<picture>` con `srcset`.
+- El recorte de cada foto (`object-position`) y el fondo borroso que se ve mientras carga están al final de `styles.css` (`.ph-<nombre>`).
+- Los originales en alta quedaron en `imagenes/originales/` (no se publican: están en `.vercelignore`). `imagenes/originales/anteriores/` guarda los archivos viejos (duplicados, variantes `-800/-1600` e íconos PNG) y se puede borrar.
+- Los nombres viejos (`imagenes/granja-campo.jpg`, etc.) que quedaron guardados en la base siguen funcionando: `legacyImages` en `data/products.js` los traduce al archivo nuevo, y `vercel.json` los redirige.
+
+### Rendimiento, caché y modo sin conexión
+
+- `vercel.json` define la caché: fotos y fuentes por un año (`immutable`, porque su nombre no cambia), código y estilos por una hora con revalidación, y `sw.js` sin caché.
+- `sw.js` (service worker de la tienda) guarda los archivos estáticos y muestra `offline.html` si no hay conexión. Para forzar una limpieza completa, cambiá el número de `VERSION` en `sw.js`.
+- Las fuentes (Karla, Arbutus Slab y Zilla Slab) están en `fuentes/`: no se piden a Google.
+- `main.js` arranca el código después de pintar la portada y carga Supabase una sola vez; `effects.js` (partículas, confeti), `lightbox.js` (visor de fotos) y `easter-eggs.js` (minijuego) se cargan recién cuando hacen falta.
 
 ## Checklist antes de publicar
 
